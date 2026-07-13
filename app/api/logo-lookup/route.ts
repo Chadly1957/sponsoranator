@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { errorResponse } from '@/lib/api-helpers';
-import { findLogoUrlForCompany, LogoError } from '@/lib/logo';
+import {
+  extractDomain,
+  findLogoUrlForCompany,
+  findLogoUrlForDomain,
+  guessNameFromUrl,
+  looksLikeWebsite,
+  LogoError,
+} from '@/lib/logo';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    if (!name) throw new LogoError('A company name is required.');
+    const query = typeof body.query === 'string' ? body.query.trim() : '';
+    if (!query) throw new LogoError('A company name or website is required.');
 
-    const url = await findLogoUrlForCompany(name);
-    return NextResponse.json({ url });
+    if (looksLikeWebsite(query)) {
+      const domain = extractDomain(query);
+      if (!domain) throw new LogoError("That doesn't look like a valid website.");
+      const url = await findLogoUrlForDomain(domain);
+      const suggestedName = guessNameFromUrl(`https://${domain}`);
+      return NextResponse.json({ url, suggestedName: suggestedName || null });
+    }
+
+    const url = await findLogoUrlForCompany(query);
+    return NextResponse.json({ url, suggestedName: null });
   } catch (err) {
     return errorResponse(err);
   }

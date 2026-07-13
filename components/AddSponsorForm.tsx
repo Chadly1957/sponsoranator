@@ -37,15 +37,24 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
       const res = await fetch('/api/logo-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: query.trim() }),
+        body: JSON.stringify({ query: query.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Lookup failed.');
+
+      if (data.suggestedName) setQuery(data.suggestedName);
+
       if (data.url) {
         setDiscoveredUrl(data.url);
         setLogo({ file: null, url: data.url });
         setPickerKey((k) => k + 1);
-        setAutoFindMessage('Found a logo below — double check it before adding.');
+        setAutoFindMessage(
+          data.suggestedName
+            ? 'Found a logo and company name below — double check them before adding.'
+            : 'Found a logo below — double check it before adding.'
+        );
+      } else if (data.suggestedName) {
+        setAutoFindMessage("Found the company name, but couldn't find a logo. Paste a URL or upload one below.");
       } else {
         setAutoFindMessage("Couldn't find a logo automatically. Paste a URL or upload one instead.");
       }
@@ -104,6 +113,12 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
           query={query}
           onQueryChange={handleQueryChange}
         />
+        {!selected && !query.trim() && (
+          <p className="mt-1 text-xs text-gray-400">
+            Tip: you can paste the company&apos;s website (e.g. acmetrucking.com) instead of typing a
+            name — auto-find will fill in both the name and logo.
+          </p>
+        )}
       </div>
 
       {!selected && query.trim() && (

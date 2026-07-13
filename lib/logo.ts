@@ -133,6 +133,24 @@ function guessDomainCandidates(name: string): string[] {
   return candidates.slice(0, 3);
 }
 
+/** Checks Clearbit's public logo API for one exact domain. Returns the image URL, or null. */
+async function checkClearbitLogo(domain: string): Promise<string | null> {
+  const candidateUrl = `https://logo.clearbit.com/${domain}?size=256`;
+  try {
+    const res = await fetch(candidateUrl, {
+      headers: { 'User-Agent': 'Sponsoranator/1.0 (logo importer)' },
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    if (arrayBuffer.byteLength < 200) return null; // too small to be a real logo
+    return candidateUrl;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Best-effort automatic logo lookup: guesses a domain from the company name and asks
  * Clearbit's public logo API for it. Returns the external image URL if one was found
@@ -140,20 +158,31 @@ function guessDomainCandidates(name: string): string[] {
  */
 export async function findLogoUrlForCompany(name: string): Promise<string | null> {
   for (const domain of guessDomainCandidates(name)) {
-    const candidateUrl = `https://logo.clearbit.com/${domain}?size=256`;
-    try {
-      const res = await fetch(candidateUrl, {
-        headers: { 'User-Agent': 'Sponsoranator/1.0 (logo importer)' },
-      });
-      if (!res.ok) continue;
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.startsWith('image/')) continue;
-      const arrayBuffer = await res.arrayBuffer();
-      if (arrayBuffer.byteLength < 200) continue; // too small to be a real logo
-      return candidateUrl;
-    } catch {
-      continue;
-    }
+    const found = await checkClearbitLogo(domain);
+    if (found) return found;
   }
   return null;
+}
+
+/** Looks up a logo for a known, exact domain (no guessing) via Clearbit. */
+export async function findLogoUrlForDomain(domain: string): Promise<string | null> {
+  return checkClearbitLogo(domain);
+}
+
+/** True if the input reads like a website (a bare domain or full URL) rather than a company name. */
+export function looksLikeWebsite(input: string): boolean {
+  const trimmed = input.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  return /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/\S*)?$/i.test(trimmed);
+}
+
+/** Normalizes a bare domain or URL string (with or without protocol) down to a hostname. */
+export function extractDomain(input: string): string | null {
+  const trimmed = input.trim();
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withProtocol).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
 }
