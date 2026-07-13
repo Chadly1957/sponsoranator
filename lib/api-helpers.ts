@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { LogoError, importLogoFromUpload, importLogoFromUrl } from './logo';
+import { clampLogosPerRow } from './tiers';
 
 export function errorResponse(err: unknown) {
   if (err instanceof LogoError) {
@@ -38,4 +39,13 @@ export function requireString(form: FormData, key: string): string {
 export function optionalString(form: FormData, key: string): string | undefined {
   const value = form.get(key);
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/** Reads a "logosPerRow" field from FormData, clamped to 2/3/4. Undefined if not present. */
+export function optionalLogosPerRow(form: FormData): number | undefined {
+  const value = form.get('logosPerRow');
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return undefined;
+  return clampLogosPerRow(parsed);
 }

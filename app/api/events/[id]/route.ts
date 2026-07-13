@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { errorResponse, optionalString, resolveLogoFromForm } from '@/lib/api-helpers';
+import { errorResponse, optionalString, optionalLogosPerRow, resolveLogoFromForm } from '@/lib/api-helpers';
 import { deleteLogoFile } from '@/lib/logo';
 import { tierRank } from '@/lib/tiers';
 
@@ -31,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const primaryColor = optionalString(form, 'primaryColor');
     const accentColor = optionalString(form, 'accentColor');
     const topTierLabel = optionalString(form, 'topTierLabel');
+    const logosPerRow = optionalLogosPerRow(form);
     const newLogoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.update({
@@ -40,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(primaryColor ? { primaryColor } : {}),
         ...(accentColor ? { accentColor } : {}),
         ...(topTierLabel ? { topTierLabel } : {}),
+        ...(logosPerRow !== undefined ? { logosPerRow } : {}),
         ...(newLogoPath ? { logoPath: newLogoPath } : {}),
       },
     });

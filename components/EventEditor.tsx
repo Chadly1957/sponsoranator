@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import LogoPicker, { LogoValue } from './LogoPicker';
 import ColorField from './ColorField';
+import LogosPerRowField from './LogosPerRowField';
 import AddSponsorForm from './AddSponsorForm';
 import SponsorRow from './SponsorRow';
 import { TIER_ORDER, TIER_LABELS } from '@/lib/tiers';
@@ -19,6 +20,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [primaryColor, setPrimaryColor] = useState(initialEvent.primaryColor);
   const [accentColor, setAccentColor] = useState(initialEvent.accentColor);
   const [topTierLabel, setTopTierLabel] = useState(initialEvent.topTierLabel);
+  const [logosPerRow, setLogosPerRow] = useState(initialEvent.logosPerRow);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
       form.set('primaryColor', primaryColor);
       form.set('accentColor', accentColor);
       form.set('topTierLabel', topTierLabel);
+      form.set('logosPerRow', String(logosPerRow));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
       const res = await fetch(`/api/events/${event.id}`, { method: 'PATCH', body: form });
@@ -139,6 +142,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
             <ColorField label="Border / header color" value={primaryColor} onChange={setPrimaryColor} />
             <ColorField label="Accent color" value={accentColor} onChange={setAccentColor} />
           </div>
+          <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
           <div>
             <span className="mb-1 block text-sm font-medium text-gray-700">Event logo</span>
             <LogoPicker onChange={setLogo} currentPreview={event.logoPath} />

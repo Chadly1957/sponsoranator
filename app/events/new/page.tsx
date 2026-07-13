@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LogoPicker, { LogoValue } from '@/components/LogoPicker';
 import ColorField from '@/components/ColorField';
+import LogosPerRowField from '@/components/LogosPerRowField';
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function NewEventPage() {
   const [primaryColor, setPrimaryColor] = useState('#0a2f5c');
   const [accentColor, setAccentColor] = useState('#e8384f');
   const [topTierLabel, setTopTierLabel] = useState('Presenting Sponsors');
+  const [logosPerRow, setLogosPerRow] = useState(4);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function NewEventPage() {
       form.set('primaryColor', primaryColor);
       form.set('accentColor', accentColor);
       form.set('topTierLabel', topTierLabel);
+      form.set('logosPerRow', String(logosPerRow));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
 
@@ -76,6 +79,8 @@ export default function NewEventPage() {
           <ColorField label="Border / header color" value={primaryColor} onChange={setPrimaryColor} />
           <ColorField label="Accent color" value={accentColor} onChange={setAccentColor} />
         </div>
+
+        <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
 
         <div>
           <span className="mb-1 block text-sm font-medium text-gray-700">Event logo (optional)</span>

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Event" ADD COLUMN     "logosPerRow" INTEGER NOT NULL DEFAULT 4;

@@ -1,7 +1,7 @@
 import { createCanvas, GlobalFonts, Image, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
 import { readLogoBytes } from './files';
-import { TIER_LAYOUT, TIER_ORDER, type Tier } from './tiers';
+import { columnsForTier, TIER_CELL_HEIGHT, TIER_ORDER, type Tier } from './tiers';
 
 const FONT_DIR = path.join(process.cwd(), 'assets', 'fonts');
 const FONT_REGULAR = 'Sponsoranator Sans';
@@ -28,6 +28,7 @@ export interface RenderEventInfo {
   logoPath: string | null;
   primaryColor: string;
   accentColor: string;
+  logosPerRow: number;
 }
 
 const CANVAS_WIDTH = 1000;
@@ -123,7 +124,7 @@ function tierRows(count: number, columns: number): number {
 }
 
 /** Computes the total canvas height needed for the given sponsor set. */
-function computeHeight(groupedCounts: Partial<Record<Tier, number>>): number {
+function computeHeight(groupedCounts: Partial<Record<Tier, number>>, logosPerRow: number): number {
   let height = HEADER_TOP_PAD + LOGO_MAX_HEIGHT + GAP_LOGO_TO_TITLE + TITLE_HEIGHT + HEADER_BOTTOM_PAD;
   height += BODY_TOP_PAD;
   let firstTier = true;
@@ -132,8 +133,8 @@ function computeHeight(groupedCounts: Partial<Record<Tier, number>>): number {
     if (count === 0) continue;
     if (!firstTier) height += TIER_GAP;
     firstTier = false;
-    const { columns, cellHeight } = TIER_LAYOUT[tier];
-    height += tierRows(count, columns) * cellHeight;
+    const columns = columnsForTier(tier, logosPerRow);
+    height += tierRows(count, columns) * TIER_CELL_HEIGHT[tier];
   }
   height += BODY_BOTTOM_PAD;
   return Math.round(height);
@@ -154,7 +155,7 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
   const counts: Partial<Record<Tier, number>> = {};
   for (const tier of TIER_ORDER) counts[tier] = grouped[tier]?.length ?? 0;
 
-  const canvasHeight = computeHeight(counts);
+  const canvasHeight = computeHeight(counts, event.logosPerRow);
   const canvas = createCanvas(CANVAS_WIDTH, canvasHeight);
   const ctx = canvas.getContext('2d');
 
@@ -203,7 +204,8 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
     if (!firstTier) y += TIER_GAP;
     firstTier = false;
 
-    const { columns, cellHeight } = TIER_LAYOUT[tier];
+    const columns = columnsForTier(tier, event.logosPerRow);
+    const cellHeight = TIER_CELL_HEIGHT[tier];
     const gridWidth = CANVAS_WIDTH - SIDE_PAD * 2;
     const cellWidth = (gridWidth - CELL_GAP * (columns - 1)) / columns;
 

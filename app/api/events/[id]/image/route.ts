@@ -19,6 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         logoPath: event.logoPath,
         primaryColor: event.primaryColor,
         accentColor: event.accentColor,
+        logosPerRow: event.logosPerRow,
       },
       event.sponsors.map((s) => ({
         id: s.id,

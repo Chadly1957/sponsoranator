@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { errorResponse, requireString, optionalString, resolveLogoFromForm } from '@/lib/api-helpers';
+import {
+  errorResponse,
+  requireString,
+  optionalString,
+  optionalLogosPerRow,
+  resolveLogoFromForm,
+} from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +25,11 @@ export async function POST(req: NextRequest) {
     const primaryColor = optionalString(form, 'primaryColor') ?? '#0a2f5c';
     const accentColor = optionalString(form, 'accentColor') ?? '#e8384f';
     const topTierLabel = optionalString(form, 'topTierLabel') ?? 'Presenting Sponsors';
+    const logosPerRow = optionalLogosPerRow(form) ?? 4;
     const logoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.create({
-      data: { name, primaryColor, accentColor, topTierLabel, logoPath: logoPath ?? null },
+      data: { name, primaryColor, accentColor, topTierLabel, logosPerRow, logoPath: logoPath ?? null },
     });
     return NextResponse.json({ event }, { status: 201 });
   } catch (err) {

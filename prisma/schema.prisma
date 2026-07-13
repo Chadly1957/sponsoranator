@@ -26,6 +26,8 @@ model Event {
   primaryColor    String         @default("#0a2f5c")
   accentColor     String         @default("#e8384f")
   topTierLabel    String         @default("Presenting Sponsors")
+  // Logos per row for all sponsor rows except Presenting (always its own solo row). 2, 3, or 4.
+  logosPerRow     Int            @default(4)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   sponsors        EventSponsor[]
