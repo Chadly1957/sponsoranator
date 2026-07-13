@@ -113,3 +113,47 @@ export function guessNameFromUrl(url: string): string {
     return '';
   }
 }
+
+const COMPANY_SUFFIXES =
+  /\b(inc|incorporated|llc|ltd|limited|corp|corporation|co|company|group|holdings)\b\.?/gi;
+
+/** Turns a company name into a short list of likely-domain guesses, best guess first. */
+function guessDomainCandidates(name: string): string[] {
+  const base = name
+    .toLowerCase()
+    .replace(/[.,'’&]/g, '')
+    .replace(COMPANY_SUFFIXES, '')
+    .trim();
+  const compact = base.replace(/[^a-z0-9]+/g, '');
+  const hyphenated = base.replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  const candidates: string[] = [];
+  if (compact) candidates.push(`${compact}.com`);
+  if (hyphenated && hyphenated !== compact) candidates.push(`${hyphenated}.com`);
+  return candidates.slice(0, 3);
+}
+
+/**
+ * Best-effort automatic logo lookup: guesses a domain from the company name and asks
+ * Clearbit's public logo API for it. Returns the external image URL if one was found
+ * (the caller still runs it through the normal fetch/normalize/save pipeline), or null.
+ */
+export async function findLogoUrlForCompany(name: string): Promise<string | null> {
+  for (const domain of guessDomainCandidates(name)) {
+    const candidateUrl = `https://logo.clearbit.com/${domain}?size=256`;
+    try {
+      const res = await fetch(candidateUrl, {
+        headers: { 'User-Agent': 'Sponsoranator/1.0 (logo importer)' },
+      });
+      if (!res.ok) continue;
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.startsWith('image/')) continue;
+      const arrayBuffer = await res.arrayBuffer();
+      if (arrayBuffer.byteLength < 200) continue; // too small to be a real logo
+      return candidateUrl;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}

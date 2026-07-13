@@ -19,6 +19,43 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [autoFinding, setAutoFinding] = useState(false);
+  const [autoFindMessage, setAutoFindMessage] = useState<string | null>(null);
+  const [discoveredUrl, setDiscoveredUrl] = useState<string | undefined>(undefined);
+  const [pickerKey, setPickerKey] = useState(0);
+
+  function handleQueryChange(next: string) {
+    setQuery(next);
+    setAutoFindMessage(null);
+  }
+
+  async function handleAutoFind() {
+    if (!query.trim()) return;
+    setAutoFinding(true);
+    setAutoFindMessage(null);
+    try {
+      const res = await fetch('/api/logo-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: query.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Lookup failed.');
+      if (data.url) {
+        setDiscoveredUrl(data.url);
+        setLogo({ file: null, url: data.url });
+        setPickerKey((k) => k + 1);
+        setAutoFindMessage('Found a logo below — double check it before adding.');
+      } else {
+        setAutoFindMessage("Couldn't find a logo automatically. Paste a URL or upload one instead.");
+      }
+    } catch (err) {
+      setAutoFindMessage(err instanceof Error ? err.message : 'Lookup failed.');
+    } finally {
+      setAutoFinding(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selected && !query.trim()) {
@@ -44,6 +81,9 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
       setQuery('');
       setLogo({ file: null, url: '' });
       setTier('GENERAL');
+      setDiscoveredUrl(undefined);
+      setAutoFindMessage(null);
+      setPickerKey((k) => k + 1);
       onAdded();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -58,15 +98,31 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
 
       <div>
         <span className="mb-1 block text-sm font-medium text-gray-700">Company</span>
-        <CompanyCombobox value={selected} onSelect={setSelected} query={query} onQueryChange={setQuery} />
+        <CompanyCombobox
+          value={selected}
+          onSelect={setSelected}
+          query={query}
+          onQueryChange={handleQueryChange}
+        />
       </div>
 
       {!selected && query.trim() && (
         <div>
-          <span className="mb-1 block text-sm font-medium text-gray-700">
-            New company logo (optional — add it later if you don&apos;t have it yet)
-          </span>
-          <LogoPicker onChange={setLogo} />
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="block text-sm font-medium text-gray-700">
+              New company logo (optional — add it later if you don&apos;t have it yet)
+            </span>
+            <button
+              type="button"
+              onClick={handleAutoFind}
+              disabled={autoFinding}
+              className="shrink-0 whitespace-nowrap text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+            >
+              {autoFinding ? 'Searching…' : 'Auto-find logo'}
+            </button>
+          </div>
+          {autoFindMessage && <p className="mb-2 text-xs text-gray-500">{autoFindMessage}</p>}
+          <LogoPicker key={pickerKey} onChange={setLogo} initialUrl={discoveredUrl} />
         </div>
       )}
 

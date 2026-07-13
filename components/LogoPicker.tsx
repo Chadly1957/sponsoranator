@@ -11,11 +11,16 @@ interface Props {
   onChange: (value: LogoValue) => void;
   currentPreview?: string | null;
   compact?: boolean;
+  /**
+   * Seeds the URL field on mount (e.g. from an auto-find result). Give this component a
+   * new `key` from the parent when updating it, since it's only read once, at mount time.
+   */
+  initialUrl?: string;
 }
 
-export default function LogoPicker({ onChange, currentPreview, compact }: Props) {
+export default function LogoPicker({ onChange, currentPreview, compact, initialUrl }: Props) {
   const [mode, setMode] = useState<'url' | 'file'>('url');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(initialUrl ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
