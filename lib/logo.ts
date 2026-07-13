@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { del, put } from '@vercel/blob';
+import * as cheerio from 'cheerio';
 import sharp from 'sharp';
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15MB
@@ -133,7 +134,100 @@ function guessDomainCandidates(name: string): string[] {
   return candidates.slice(0, 3);
 }
 
-/** Checks Clearbit's public logo API for one exact domain. Returns the image URL, or null. */
+const SCRAPE_TIMEOUT_MS = 8000;
+const SCRAPE_USER_AGENT =
+  'Mozilla/5.0 (compatible; SponsoranatorBot/1.0; +logo lookup for event sponsor images)';
+
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Confirms a candidate URL actually resolves to a real (non-trivial) image. */
+async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: { 'User-Agent': 'Sponsoranator/1.0 (logo importer)' },
+    });
+    if (!res.ok) return false;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/') && !contentType.includes('svg')) return false;
+    const arrayBuffer = await res.arrayBuffer();
+    return arrayBuffer.byteLength >= 200; // rules out 1x1 tracking pixels / empty responses
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Scrapes a company's own homepage for its actual logo image — no third-party directory
+ * involved, so it works for small/local businesses that a logo database wouldn't know about.
+ * Looks for (roughly in order of confidence): an <img> that looks like a logo by
+ * alt/class/id, the Open Graph / Twitter brand image, the apple touch icon, then the
+ * plain favicon as a last resort.
+ */
+async function scrapeLogoForDomain(domain: string): Promise<string | null> {
+  let baseUrl: string;
+  let html: string;
+  try {
+    let res = await fetchWithTimeout(`https://${domain}`, {
+      redirect: 'follow',
+      headers: { 'User-Agent': SCRAPE_USER_AGENT },
+    });
+    if (!res.ok) {
+      res = await fetchWithTimeout(`http://${domain}`, {
+        redirect: 'follow',
+        headers: { 'User-Agent': SCRAPE_USER_AGENT },
+      });
+    }
+    if (!res.ok) return null;
+    baseUrl = res.url;
+    html = await res.text();
+  } catch {
+    return null;
+  }
+
+  const $ = cheerio.load(html);
+  const candidates: { url: string; score: number }[] = [];
+
+  const addCandidate = (src: string | undefined, score: number) => {
+    if (!src) return;
+    try {
+      candidates.push({ url: new URL(src, baseUrl).toString(), score });
+    } catch {
+      // ignore malformed URLs
+    }
+  };
+
+  $('img').each((_, el) => {
+    const alt = ($(el).attr('alt') || '').toLowerCase();
+    const cls = ($(el).attr('class') || '').toLowerCase();
+    const id = ($(el).attr('id') || '').toLowerCase();
+    if (/logo/.test(alt) || /logo/.test(cls) || /logo/.test(id)) {
+      addCandidate($(el).attr('src') || $(el).attr('data-src'), 100);
+    }
+  });
+  addCandidate($('meta[property="og:image"]').attr('content'), 60);
+  addCandidate($('meta[name="twitter:image"]').attr('content'), 55);
+  addCandidate($('link[rel="apple-touch-icon"]').attr('href'), 50);
+  addCandidate($('link[rel="apple-touch-icon-precomposed"]').attr('href'), 50);
+  addCandidate($('link[rel="icon"]').attr('href'), 20);
+  addCandidate($('link[rel="shortcut icon"]').attr('href'), 15);
+
+  candidates.sort((a, b) => b.score - a.score);
+
+  for (const candidate of candidates) {
+    if (await validateImageUrl(candidate.url)) return candidate.url;
+  }
+  return null;
+}
+
+/** Checks Clearbit's public logo directory for one exact domain. Returns the image URL, or null. */
 async function checkClearbitLogo(domain: string): Promise<string | null> {
   const candidateUrl = `https://logo.clearbit.com/${domain}?size=256`;
   try {
@@ -152,21 +246,28 @@ async function checkClearbitLogo(domain: string): Promise<string | null> {
 }
 
 /**
- * Best-effort automatic logo lookup: guesses a domain from the company name and asks
- * Clearbit's public logo API for it. Returns the external image URL if one was found
- * (the caller still runs it through the normal fetch/normalize/save pipeline), or null.
+ * Looks up a logo for a known, exact domain: scrapes the site's own homepage first (works
+ * for small/local businesses), and only falls back to Clearbit's logo directory (which only
+ * knows about companies it has indexed) if the scrape comes up empty.
+ */
+export async function findLogoUrlForDomain(domain: string): Promise<string | null> {
+  const scraped = await scrapeLogoForDomain(domain);
+  if (scraped) return scraped;
+  return checkClearbitLogo(domain);
+}
+
+/**
+ * Best-effort automatic logo lookup: guesses a domain from the company name, then looks
+ * up a logo for each guess (site scrape first, Clearbit as a fallback). Returns the
+ * external image URL if one was found (the caller still runs it through the normal
+ * fetch/normalize/save pipeline), or null.
  */
 export async function findLogoUrlForCompany(name: string): Promise<string | null> {
   for (const domain of guessDomainCandidates(name)) {
-    const found = await checkClearbitLogo(domain);
+    const found = await findLogoUrlForDomain(domain);
     if (found) return found;
   }
   return null;
-}
-
-/** Looks up a logo for a known, exact domain (no guessing) via Clearbit. */
-export async function findLogoUrlForDomain(domain: string): Promise<string | null> {
-  return checkClearbitLogo(domain);
 }
 
 /** True if the input reads like a website (a bare domain or full URL) rather than a company name. */
