@@ -1,9 +1,10 @@
-export const TIER_ORDER = ['PRESENTING', 'GOLD', 'SILVER', 'BRONZE', 'GENERAL'] as const;
+export const TIER_ORDER = ['PRESENTING', 'PLATINUM', 'GOLD', 'SILVER', 'BRONZE', 'GENERAL'] as const;
 
 export type Tier = (typeof TIER_ORDER)[number];
 
 export const TIER_LABELS: Record<Tier, string> = {
   PRESENTING: 'Presenting',
+  PLATINUM: 'Platinum',
   GOLD: 'Gold',
   SILVER: 'Silver',
   BRONZE: 'Bronze',
@@ -16,6 +17,7 @@ export const TIER_LABELS: Record<Tier, string> = {
 // below); Presenting always stays a single solo row regardless of that setting.
 export const TIER_CELL_HEIGHT: Record<Tier, number> = {
   PRESENTING: 220,
+  PLATINUM: 185,
   GOLD: 150,
   SILVER: 115,
   BRONZE: 95,
