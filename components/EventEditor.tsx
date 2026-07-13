@@ -22,6 +22,18 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+
+  async function copyImageLink() {
+    const url = `${window.location.origin}/api/events/${event.id}/image`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+    setTimeout(() => setCopyStatus('idle'), 2000);
+  }
 
   async function refresh() {
     const res = await fetch(`/api/events/${event.id}`, { cache: 'no-store' });
@@ -89,6 +101,14 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={copyImageLink}
+            title="Copies a link that always shows the current image — safe to paste into an email or doc."
+          >
+            {copyStatus === 'copied' ? 'Link copied!' : copyStatus === 'error' ? 'Copy failed' : 'Copy Image Link'}
+          </button>
           <a className="btn-secondary" href={`/api/events/${event.id}/image?download=1`}>
             Download PNG
           </a>
