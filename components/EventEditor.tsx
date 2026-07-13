@@ -5,6 +5,7 @@ import LogoPicker, { LogoValue } from './LogoPicker';
 import ColorField from './ColorField';
 import LogosPerRowField from './LogosPerRowField';
 import GeneralScaleField from './GeneralScaleField';
+import TierLabelsToggleField from './TierLabelsToggleField';
 import AddSponsorForm from './AddSponsorForm';
 import SponsorRow from './SponsorRow';
 import { TIER_ORDER, TIER_LABELS } from '@/lib/tiers';
@@ -23,6 +24,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [topTierLabel, setTopTierLabel] = useState(initialEvent.topTierLabel);
   const [logosPerRow, setLogosPerRow] = useState(initialEvent.logosPerRow);
   const [generalScale, setGeneralScale] = useState(initialEvent.generalScale);
+  const [showTierLabels, setShowTierLabels] = useState(initialEvent.showTierLabels);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
       form.set('topTierLabel', topTierLabel);
       form.set('logosPerRow', String(logosPerRow));
       form.set('generalScale', String(generalScale));
+      form.set('showTierLabels', String(showTierLabels));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
       const res = await fetch(`/api/events/${event.id}`, { method: 'PATCH', body: form });
@@ -140,6 +143,10 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
               value={topTierLabel}
               onChange={(e) => setTopTierLabel(e.target.value)}
             />
+            <span className="mt-1 block text-xs text-gray-500">
+              Used in the sponsor list, and printed on the image above Presenting sponsors if
+              category labels are turned on below.
+            </span>
           </label>
           <div className="grid grid-cols-2 gap-4">
             <ColorField label="Border / header color" value={primaryColor} onChange={setPrimaryColor} />
@@ -147,6 +154,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
           </div>
           <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
           <GeneralScaleField value={generalScale} onChange={setGeneralScale} />
+          <TierLabelsToggleField value={showTierLabels} onChange={setShowTierLabels} />
           <div>
             <span className="mb-1 block text-sm font-medium text-gray-700">Event logo</span>
             <LogoPicker onChange={setLogo} currentPreview={event.logoPath} />

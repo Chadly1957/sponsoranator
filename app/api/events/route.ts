@@ -6,6 +6,7 @@ import {
   optionalString,
   optionalLogosPerRow,
   optionalGeneralScale,
+  optionalBoolean,
   resolveLogoFromForm,
 } from '@/lib/api-helpers';
 
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
     const topTierLabel = optionalString(form, 'topTierLabel') ?? 'Presenting Sponsors';
     const logosPerRow = optionalLogosPerRow(form) ?? 4;
     const generalScale = optionalGeneralScale(form) ?? 1.2;
+    const showTierLabels = optionalBoolean(form, 'showTierLabels') ?? false;
     const logoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.create({
@@ -38,6 +40,7 @@ export async function POST(req: NextRequest) {
         topTierLabel,
         logosPerRow,
         generalScale,
+        showTierLabels,
         logoPath: logoPath ?? null,
       },
     });

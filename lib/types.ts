@@ -23,5 +23,6 @@ export interface EventDTO {
   topTierLabel: string;
   logosPerRow: number;
   generalScale: number;
+  showTierLabels: boolean;
   sponsors: EventSponsorDTO[];
 }

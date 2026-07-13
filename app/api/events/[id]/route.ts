@@ -5,6 +5,7 @@ import {
   optionalString,
   optionalLogosPerRow,
   optionalGeneralScale,
+  optionalBoolean,
   resolveLogoFromForm,
 } from '@/lib/api-helpers';
 import { deleteLogoFile } from '@/lib/logo';
@@ -39,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const topTierLabel = optionalString(form, 'topTierLabel');
     const logosPerRow = optionalLogosPerRow(form);
     const generalScale = optionalGeneralScale(form);
+    const showTierLabels = optionalBoolean(form, 'showTierLabels');
     const newLogoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.update({
@@ -50,6 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(topTierLabel ? { topTierLabel } : {}),
         ...(logosPerRow !== undefined ? { logosPerRow } : {}),
         ...(generalScale !== undefined ? { generalScale } : {}),
+        ...(showTierLabels !== undefined ? { showTierLabels } : {}),
         ...(newLogoPath ? { logoPath: newLogoPath } : {}),
       },
     });

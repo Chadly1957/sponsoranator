@@ -6,6 +6,7 @@ import LogoPicker, { LogoValue } from '@/components/LogoPicker';
 import ColorField from '@/components/ColorField';
 import LogosPerRowField from '@/components/LogosPerRowField';
 import GeneralScaleField from '@/components/GeneralScaleField';
+import TierLabelsToggleField from '@/components/TierLabelsToggleField';
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function NewEventPage() {
   const [topTierLabel, setTopTierLabel] = useState('Presenting Sponsors');
   const [logosPerRow, setLogosPerRow] = useState(4);
   const [generalScale, setGeneralScale] = useState(1.2);
+  const [showTierLabels, setShowTierLabels] = useState(false);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export default function NewEventPage() {
       form.set('topTierLabel', topTierLabel);
       form.set('logosPerRow', String(logosPerRow));
       form.set('generalScale', String(generalScale));
+      form.set('showTierLabels', String(showTierLabels));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
 
@@ -74,7 +77,8 @@ export default function NewEventPage() {
             placeholder="Presenting Sponsors or Golf Level Sponsors"
           />
           <span className="mt-1 block text-xs text-gray-500">
-            Just a label for your own reference in the sponsor list.
+            Used in the sponsor list, and printed on the image above Presenting sponsors if
+            category labels are turned on below.
           </span>
         </label>
 
@@ -86,6 +90,8 @@ export default function NewEventPage() {
         <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
 
         <GeneralScaleField value={generalScale} onChange={setGeneralScale} />
+
+        <TierLabelsToggleField value={showTierLabels} onChange={setShowTierLabels} />
 
         <div>
           <span className="mb-1 block text-sm font-medium text-gray-700">Event logo (optional)</span>

@@ -1,7 +1,7 @@
 import { createCanvas, GlobalFonts, Image, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
 import { readLogoBytes } from './files';
-import { cellHeightForTier, columnsForTier, TIER_ORDER, type Tier } from './tiers';
+import { cellHeightForTier, columnsForTier, TIER_LABELS, TIER_ORDER, type Tier } from './tiers';
 
 const FONT_DIR = path.join(process.cwd(), 'assets', 'fonts');
 const FONT_REGULAR = 'Sponsoranator Sans';
@@ -28,8 +28,10 @@ export interface RenderEventInfo {
   logoPath: string | null;
   primaryColor: string;
   accentColor: string;
+  topTierLabel: string;
   logosPerRow: number;
   generalScale: number;
+  showTierLabels: boolean;
 }
 
 const CANVAS_WIDTH = 1000;
@@ -49,6 +51,15 @@ const BODY_TOP_PAD = 34;
 const BODY_BOTTOM_PAD = 44;
 const CELL_GAP = 18;
 const CELL_INNER_PAD = 14;
+
+const TIER_LABEL_FONT_SIZE = 20;
+const TIER_LABEL_HEIGHT = 26;
+const TIER_LABEL_GAP = 10;
+
+/** Category labels (e.g. "Gold") are drawn for every tier except General. */
+function tierLabelBlockHeight(tier: Tier, showTierLabels: boolean): number {
+  return showTierLabels && tier !== 'GENERAL' ? TIER_LABEL_HEIGHT + TIER_LABEL_GAP : 0;
+}
 
 function roundedRectPath(ctx: SKRSContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -128,7 +139,8 @@ function tierRows(count: number, columns: number): number {
 function computeHeight(
   groupedCounts: Partial<Record<Tier, number>>,
   logosPerRow: number,
-  generalScale: number
+  generalScale: number,
+  showTierLabels: boolean
 ): number {
   let height = HEADER_TOP_PAD + LOGO_MAX_HEIGHT + GAP_LOGO_TO_TITLE + TITLE_HEIGHT + HEADER_BOTTOM_PAD;
   height += BODY_TOP_PAD;
@@ -138,6 +150,7 @@ function computeHeight(
     if (count === 0) continue;
     if (!firstTier) height += TIER_GAP;
     firstTier = false;
+    height += tierLabelBlockHeight(tier, showTierLabels);
     const columns = columnsForTier(tier, logosPerRow);
     height += tierRows(count, columns) * cellHeightForTier(tier, generalScale);
   }
@@ -160,7 +173,7 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
   const counts: Partial<Record<Tier, number>> = {};
   for (const tier of TIER_ORDER) counts[tier] = grouped[tier]?.length ?? 0;
 
-  const canvasHeight = computeHeight(counts, event.logosPerRow, event.generalScale);
+  const canvasHeight = computeHeight(counts, event.logosPerRow, event.generalScale, event.showTierLabels);
   const canvas = createCanvas(CANVAS_WIDTH, canvasHeight);
   const ctx = canvas.getContext('2d');
 
@@ -208,6 +221,16 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
     if (!list || list.length === 0) continue;
     if (!firstTier) y += TIER_GAP;
     firstTier = false;
+
+    if (event.showTierLabels && tier !== 'GENERAL') {
+      const labelText = (tier === 'PRESENTING' ? event.topTierLabel : TIER_LABELS[tier]).toUpperCase();
+      ctx.font = `bold ${TIER_LABEL_FONT_SIZE}px "${FONT_BOLD}"`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = event.accentColor || '#e8384f';
+      ctx.fillText(labelText, CANVAS_WIDTH / 2, y, CANVAS_WIDTH - SIDE_PAD * 2);
+      y += TIER_LABEL_HEIGHT + TIER_LABEL_GAP;
+    }
 
     const columns = columnsForTier(tier, event.logosPerRow);
     const cellHeight = cellHeightForTier(tier, event.generalScale);

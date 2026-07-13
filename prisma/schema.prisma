@@ -30,6 +30,8 @@ model Event {
   logosPerRow     Int            @default(4)
   // Size multiplier for General-tier logo cells (0.5-2.0, 1.2 = default 20% bump over base).
   generalScale    Float          @default(1.2)
+  // Draws a category label (e.g. "Gold") above each tier's row block, except General.
+  showTierLabels  Boolean        @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   sponsors        EventSponsor[]

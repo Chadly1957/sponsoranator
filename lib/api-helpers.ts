@@ -58,3 +58,9 @@ export function optionalGeneralScale(form: FormData): number | undefined {
   if (Number.isNaN(parsed)) return undefined;
   return clampGeneralScale(parsed);
 }
+
+export function optionalBoolean(form: FormData, key: string): boolean | undefined {
+  const value = form.get(key);
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  return value === 'true' || value === 'on' || value === '1';
+}
