@@ -22,5 +22,6 @@ export interface EventDTO {
   accentColor: string;
   topTierLabel: string;
   logosPerRow: number;
+  generalScale: number;
   sponsors: EventSponsorDTO[];
 }

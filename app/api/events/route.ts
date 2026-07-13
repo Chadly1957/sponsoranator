@@ -5,6 +5,7 @@ import {
   requireString,
   optionalString,
   optionalLogosPerRow,
+  optionalGeneralScale,
   resolveLogoFromForm,
 } from '@/lib/api-helpers';
 
@@ -26,10 +27,19 @@ export async function POST(req: NextRequest) {
     const accentColor = optionalString(form, 'accentColor') ?? '#e8384f';
     const topTierLabel = optionalString(form, 'topTierLabel') ?? 'Presenting Sponsors';
     const logosPerRow = optionalLogosPerRow(form) ?? 4;
+    const generalScale = optionalGeneralScale(form) ?? 1.2;
     const logoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.create({
-      data: { name, primaryColor, accentColor, topTierLabel, logosPerRow, logoPath: logoPath ?? null },
+      data: {
+        name,
+        primaryColor,
+        accentColor,
+        topTierLabel,
+        logosPerRow,
+        generalScale,
+        logoPath: logoPath ?? null,
+      },
     });
     return NextResponse.json({ event }, { status: 201 });
   } catch (err) {

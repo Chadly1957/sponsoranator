@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { LogoError, importLogoFromUpload, importLogoFromUrl } from './logo';
-import { clampLogosPerRow } from './tiers';
+import { clampGeneralScale, clampLogosPerRow } from './tiers';
 
 export function errorResponse(err: unknown) {
   if (err instanceof LogoError) {
@@ -48,4 +48,13 @@ export function optionalLogosPerRow(form: FormData): number | undefined {
   const parsed = Number(value);
   if (Number.isNaN(parsed)) return undefined;
   return clampLogosPerRow(parsed);
+}
+
+/** Reads a "generalScale" field from FormData, clamped to 0.5-2.0. Undefined if not present. */
+export function optionalGeneralScale(form: FormData): number | undefined {
+  const value = form.get('generalScale');
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return undefined;
+  return clampGeneralScale(parsed);
 }

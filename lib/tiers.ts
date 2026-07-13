@@ -10,7 +10,8 @@ export const TIER_LABELS: Record<Tier, string> = {
   GENERAL: 'General',
 };
 
-// Logo cell height (px, at render resolution) for each tier — earlier tiers render larger.
+// Base logo cell height (px, at render resolution) for each tier — earlier tiers render
+// larger. GENERAL is further adjustable per-event via generalScale (see below).
 // Columns per row are configurable per-event (see LOGOS_PER_ROW_OPTIONS / columnsForTier
 // below); Presenting always stays a single solo row regardless of that setting.
 export const TIER_CELL_HEIGHT: Record<Tier, number> = {
@@ -18,10 +19,7 @@ export const TIER_CELL_HEIGHT: Record<Tier, number> = {
   GOLD: 150,
   SILVER: 115,
   BRONZE: 95,
-  // 96.4 rather than a round 20% bump off 85: render.ts subtracts a fixed 28px of inner
-  // padding before fitting the logo, so this is what makes the *fittable logo area* ~20%
-  // bigger (not just the outer cell, which would understate the visible size increase).
-  GENERAL: 96.4,
+  GENERAL: 85,
 };
 
 export const LOGOS_PER_ROW_OPTIONS = [2, 3, 4] as const;
@@ -36,6 +34,22 @@ export function clampLogosPerRow(value: number): LogosPerRow {
 /** Columns per row for a tier, given the event's configured logos-per-row setting. */
 export function columnsForTier(tier: Tier, logosPerRow: number): number {
   return tier === 'PRESENTING' ? 1 : clampLogosPerRow(logosPerRow);
+}
+
+export const GENERAL_SCALE_MIN = 0.5;
+export const GENERAL_SCALE_MAX = 2;
+export const GENERAL_SCALE_DEFAULT = 1.2;
+export const GENERAL_SCALE_STEP = 0.05;
+
+export function clampGeneralScale(value: number): number {
+  if (Number.isNaN(value)) return GENERAL_SCALE_DEFAULT;
+  return Math.min(GENERAL_SCALE_MAX, Math.max(GENERAL_SCALE_MIN, value));
+}
+
+/** Cell height for a tier, applying the event's General-size scale where relevant. */
+export function cellHeightForTier(tier: Tier, generalScale: number): number {
+  if (tier === 'GENERAL') return TIER_CELL_HEIGHT.GENERAL * clampGeneralScale(generalScale);
+  return TIER_CELL_HEIGHT[tier];
 }
 
 export function tierRank(tier: string): number {

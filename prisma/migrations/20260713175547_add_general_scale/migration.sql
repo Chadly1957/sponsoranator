@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Event" ADD COLUMN     "generalScale" DOUBLE PRECISION NOT NULL DEFAULT 1.2;

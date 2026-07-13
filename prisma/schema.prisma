@@ -28,6 +28,8 @@ model Event {
   topTierLabel    String         @default("Presenting Sponsors")
   // Logos per row for all sponsor rows except Presenting (always its own solo row). 2, 3, or 4.
   logosPerRow     Int            @default(4)
+  // Size multiplier for General-tier logo cells (0.5-2.0, 1.2 = default 20% bump over base).
+  generalScale    Float          @default(1.2)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   sponsors        EventSponsor[]

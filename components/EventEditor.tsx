@@ -4,6 +4,7 @@ import { useState } from 'react';
 import LogoPicker, { LogoValue } from './LogoPicker';
 import ColorField from './ColorField';
 import LogosPerRowField from './LogosPerRowField';
+import GeneralScaleField from './GeneralScaleField';
 import AddSponsorForm from './AddSponsorForm';
 import SponsorRow from './SponsorRow';
 import { TIER_ORDER, TIER_LABELS } from '@/lib/tiers';
@@ -21,6 +22,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [accentColor, setAccentColor] = useState(initialEvent.accentColor);
   const [topTierLabel, setTopTierLabel] = useState(initialEvent.topTierLabel);
   const [logosPerRow, setLogosPerRow] = useState(initialEvent.logosPerRow);
+  const [generalScale, setGeneralScale] = useState(initialEvent.generalScale);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
       form.set('accentColor', accentColor);
       form.set('topTierLabel', topTierLabel);
       form.set('logosPerRow', String(logosPerRow));
+      form.set('generalScale', String(generalScale));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
       const res = await fetch(`/api/events/${event.id}`, { method: 'PATCH', body: form });
@@ -143,6 +146,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
             <ColorField label="Accent color" value={accentColor} onChange={setAccentColor} />
           </div>
           <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
+          <GeneralScaleField value={generalScale} onChange={setGeneralScale} />
           <div>
             <span className="mb-1 block text-sm font-medium text-gray-700">Event logo</span>
             <LogoPicker onChange={setLogo} currentPreview={event.logoPath} />
