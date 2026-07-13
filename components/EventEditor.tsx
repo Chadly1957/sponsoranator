@@ -31,7 +31,8 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   async function copyImageLink() {
-    const url = `${window.location.origin}/api/events/${event.id}/image`;
+    const filename = `${event.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'event'}-sponsors.png`;
+    const url = `${window.location.origin}/api/events/${event.id}/image/${filename}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopyStatus('copied');

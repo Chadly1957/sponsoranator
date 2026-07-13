@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/api-helpers';
 import { readLogoBytes, sanitizeFilename } from '@/lib/files';
+import { slugifyFilename } from '@/lib/eventImage';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
 
     const content = await zip.generateAsync({ type: 'nodebuffer' });
-    const filenameSafe = event.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'event';
+    const filenameSafe = slugifyFilename(event.name);
 
     return new NextResponse(new Uint8Array(content), {
       status: 200,
