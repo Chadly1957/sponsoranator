@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id            String         @id @default(cuid())
+  name          String
+  logoPath      String?
+  sourceUrl     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  eventSponsors EventSponsor[]
+
+  @@index([name])
+}
+
+model Event {
+  id              String         @id @default(cuid())
+  name            String
+  logoPath        String?
+  primaryColor    String         @default("#0a2f5c")
+  accentColor     String         @default("#e8384f")
+  topTierLabel    String         @default("Presenting Sponsors")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  sponsors        EventSponsor[]
+}
+
+model EventSponsor {
+  id        String      @id @default(cuid())
+  eventId   String
+  companyId String
+  tier      String      @default("GENERAL")
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, companyId])
+}

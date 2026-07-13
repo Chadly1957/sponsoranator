@@ -1,0 +1,3 @@
+Liberation Sans is distributed under the SIL Open Font License, Version 1.1.
+Bundled here so generated sponsor images render consistently across any
+deployment environment, regardless of which system fonts are installed.
