@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/api-helpers';
-import { readPublicFile, sanitizeFilename } from '@/lib/files';
+import { readLogoBytes, sanitizeFilename } from '@/lib/files';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     for (const sponsor of event.sponsors) {
       if (!sponsor.company.logoPath) continue;
       try {
-        const buffer = await readPublicFile(sponsor.company.logoPath);
+        const buffer = await readLogoBytes(sponsor.company.logoPath);
         let base = sanitizeFilename(sponsor.company.name);
         let filename = `${base}.png`;
         let n = 2;

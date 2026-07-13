@@ -1,6 +1,6 @@
 import { createCanvas, GlobalFonts, Image, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
-import { readPublicFile } from './files';
+import { readLogoBytes } from './files';
 import { TIER_LAYOUT, TIER_ORDER, type Tier } from './tiers';
 
 const FONT_DIR = path.join(process.cwd(), 'assets', 'fonts');
@@ -61,7 +61,7 @@ function roundedRectPath(ctx: SKRSContext2D, x: number, y: number, w: number, h:
 async function loadImageSafe(logoPath: string | null): Promise<Image | null> {
   if (!logoPath) return null;
   try {
-    const buf = await readPublicFile(logoPath);
+    const buf = await readLogoBytes(logoPath);
     return await loadImage(buf);
   } catch {
     return null;

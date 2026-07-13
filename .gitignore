@@ -8,14 +8,6 @@ npm-debug.log*
 .env
 .env*.local
 
-# prisma sqlite db
-prisma/dev.db
-prisma/dev.db-journal
-
-# uploaded logo files
-public/uploads/*
-!public/uploads/.gitkeep
-
 # misc
 .DS_Store
 *.pem

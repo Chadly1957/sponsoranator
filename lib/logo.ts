@@ -1,17 +1,11 @@
 import { randomUUID } from 'crypto';
-import { mkdir, unlink, writeFile } from 'fs/promises';
-import path from 'path';
+import { del, put } from '@vercel/blob';
 import sharp from 'sharp';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const MAX_BYTES = 15 * 1024 * 1024; // 15MB
 const MAX_DIMENSION = 900;
 
 export class LogoError extends Error {}
-
-async function ensureUploadDir() {
-  await mkdir(UPLOAD_DIR, { recursive: true });
-}
 
 /** Downloads an image from a URL and returns the raw bytes + content-type. */
 export async function fetchImageFromUrl(url: string): Promise<Buffer> {
@@ -78,21 +72,21 @@ export async function normalizeToPng(input: Buffer): Promise<Buffer> {
   return buffer;
 }
 
-/** Saves a normalized PNG buffer to disk and returns its public path (e.g. /uploads/xyz.png). */
+/** Uploads a normalized PNG buffer to Vercel Blob and returns its public URL. */
 export async function saveLogoPng(buffer: Buffer): Promise<string> {
-  await ensureUploadDir();
-  const filename = `${randomUUID()}.png`;
-  await writeFile(path.join(UPLOAD_DIR, filename), buffer);
-  return `/uploads/${filename}`;
+  const blob = await put(`logos/${randomUUID()}.png`, buffer, {
+    access: 'public',
+    contentType: 'image/png',
+  });
+  return blob.url;
 }
 
 export async function deleteLogoFile(logoPath: string | null | undefined) {
   if (!logoPath) return;
-  const filename = path.basename(logoPath);
   try {
-    await unlink(path.join(UPLOAD_DIR, filename));
+    await del(logoPath);
   } catch {
-    // ignore missing files
+    // ignore missing/already-deleted blobs
   }
 }
 
