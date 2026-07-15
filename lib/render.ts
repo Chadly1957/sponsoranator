@@ -56,6 +56,16 @@ const TIER_LABEL_FONT_SIZE = 20;
 const TIER_LABEL_HEIGHT = 26;
 const TIER_LABEL_GAP = 10;
 
+// A pure contain-fit (min of width-scale/height-scale) makes wide "wordmark" logos fill
+// their cell edge-to-edge while square/tall logos hit the height limit first and end up
+// visibly tiny by comparison, even though they're not using the available width either.
+// To balance that, each row's height is allowed to grow (up to a cap) so that any logo in
+// it can reach roughly the same *rendered area* as a wide logo would at that cell's nominal
+// size, not just the same bounding box. Wide logos are already width-capped and unaffected;
+// square/tall ones get taller (never wider than the column) until they're visually on par.
+const ROW_FILL_RATIO = 0.7;
+const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
+
 /** Category labels (e.g. "Gold") are drawn for every tier except General. */
 function tierLabelBlockHeight(tier: Tier, showTierLabels: boolean): number {
   return showTierLabels && tier !== 'GENERAL' ? TIER_LABEL_HEIGHT + TIER_LABEL_GAP : 0;
@@ -131,31 +141,69 @@ function drawPlaceholder(ctx: SKRSContext2D, name: string, x: number, y: number,
   });
 }
 
-function tierRows(count: number, columns: number): number {
-  return Math.max(1, Math.ceil(count / columns));
+interface RowItem {
+  sponsor: RenderSponsor;
+  img: Image | null;
+  drawW: number;
+  drawH: number;
 }
 
-/** Computes the total canvas height needed for the given sponsor set. */
-function computeHeight(
-  groupedCounts: Partial<Record<Tier, number>>,
-  logosPerRow: number,
-  generalScale: number,
-  showTierLabels: boolean
-): number {
-  let height = HEADER_TOP_PAD + LOGO_MAX_HEIGHT + GAP_LOGO_TO_TITLE + TITLE_HEIGHT + HEADER_BOTTOM_PAD;
-  height += BODY_TOP_PAD;
-  let firstTier = true;
-  for (const tier of TIER_ORDER) {
-    const count = groupedCounts[tier] ?? 0;
-    if (count === 0) continue;
-    if (!firstTier) height += TIER_GAP;
-    firstTier = false;
-    height += tierLabelBlockHeight(tier, showTierLabels);
-    const columns = columnsForTier(tier, logosPerRow);
-    height += tierRows(count, columns) * cellHeightForTier(tier, generalScale);
+interface RowLayout {
+  items: RowItem[];
+  innerHeight: number;
+}
+
+interface TierLayout {
+  tier: Tier;
+  columns: number;
+  cellWidth: number;
+  labelHeight: number;
+  rows: RowLayout[];
+}
+
+/**
+ * Chunks a tier's sponsors into rows and, for each row, picks a height that lets every
+ * logo in it reach a comparable rendered area (see ROW_FILL_RATIO comment above) — then
+ * fits each logo within that row's final (columnWidth x rowHeight) box.
+ */
+async function buildTierRows(
+  list: RenderSponsor[],
+  columns: number,
+  cellWidth: number,
+  baseCellHeight: number
+): Promise<RowLayout[]> {
+  const innerWidth = cellWidth - CELL_INNER_PAD * 2;
+  const baseInnerHeight = baseCellHeight - CELL_INNER_PAD * 2;
+  const maxInnerHeight = baseInnerHeight * MAX_ROW_HEIGHT_MULTIPLIER;
+  const targetArea = innerWidth * baseInnerHeight * ROW_FILL_RATIO;
+
+  const rows: RowLayout[] = [];
+  for (let start = 0; start < list.length; start += columns) {
+    const chunk = list.slice(start, start + columns);
+    const withImages = await Promise.all(
+      chunk.map(async (sponsor) => ({ sponsor, img: await loadImageSafe(sponsor.logoPath) }))
+    );
+
+    let neededHeight = baseInnerHeight;
+    for (const { img } of withImages) {
+      if (!img) continue;
+      const naiveScale = Math.min(innerWidth / img.width, baseInnerHeight / img.height);
+      const areaScale = Math.sqrt(targetArea / (img.width * img.height));
+      const widthCappedAreaScale = Math.min(areaScale, innerWidth / img.width);
+      const effectiveScale = Math.max(naiveScale, widthCappedAreaScale);
+      neededHeight = Math.max(neededHeight, img.height * effectiveScale);
+    }
+    const rowInnerHeight = Math.min(neededHeight, maxInnerHeight);
+
+    const items: RowItem[] = withImages.map(({ sponsor, img }) => {
+      if (!img) return { sponsor, img: null, drawW: 0, drawH: 0 };
+      const scale = Math.min(innerWidth / img.width, rowInnerHeight / img.height);
+      return { sponsor, img, drawW: img.width * scale, drawH: img.height * scale };
+    });
+
+    rows.push({ items, innerHeight: rowInnerHeight });
   }
-  height += BODY_BOTTOM_PAD;
-  return Math.round(height);
+  return rows;
 }
 
 export async function renderEventImage(event: RenderEventInfo, sponsors: RenderSponsor[]): Promise<Buffer> {
@@ -170,10 +218,35 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
     grouped[tier]?.sort((a, b) => a.order - b.order);
   }
 
-  const counts: Partial<Record<Tier, number>> = {};
-  for (const tier of TIER_ORDER) counts[tier] = grouped[tier]?.length ?? 0;
+  const gridWidth = CANVAS_WIDTH - SIDE_PAD * 2;
+  const tierLayouts: TierLayout[] = [];
+  for (const tier of TIER_ORDER) {
+    const list = grouped[tier];
+    if (!list || list.length === 0) continue;
+    const columns = columnsForTier(tier, event.logosPerRow);
+    const cellWidth = (gridWidth - CELL_GAP * (columns - 1)) / columns;
+    const baseCellHeight = cellHeightForTier(tier, event.generalScale);
+    const rows = await buildTierRows(list, columns, cellWidth, baseCellHeight);
+    tierLayouts.push({
+      tier,
+      columns,
+      cellWidth,
+      labelHeight: tierLabelBlockHeight(tier, event.showTierLabels),
+      rows,
+    });
+  }
 
-  const canvasHeight = computeHeight(counts, event.logosPerRow, event.generalScale, event.showTierLabels);
+  const headerHeight = HEADER_TOP_PAD + LOGO_MAX_HEIGHT + GAP_LOGO_TO_TITLE + TITLE_HEIGHT + HEADER_BOTTOM_PAD;
+
+  let bodyHeight = BODY_TOP_PAD;
+  tierLayouts.forEach((t, idx) => {
+    if (idx > 0) bodyHeight += TIER_GAP;
+    bodyHeight += t.labelHeight;
+    for (const row of t.rows) bodyHeight += row.innerHeight + CELL_INNER_PAD * 2;
+  });
+  bodyHeight += BODY_BOTTOM_PAD;
+
+  const canvasHeight = Math.round(headerHeight + bodyHeight);
   const canvas = createCanvas(CANVAS_WIDTH, canvasHeight);
   const ctx = canvas.getContext('2d');
 
@@ -184,7 +257,6 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
 
-  const headerHeight = HEADER_TOP_PAD + LOGO_MAX_HEIGHT + GAP_LOGO_TO_TITLE + TITLE_HEIGHT + HEADER_BOTTOM_PAD;
   ctx.fillStyle = event.primaryColor || '#0a2f5c';
   ctx.fillRect(0, 0, CANVAS_WIDTH, headerHeight);
 
@@ -215,55 +287,41 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
 
   // Sponsor grid.
   let y = headerHeight + BODY_TOP_PAD;
-  let firstTier = true;
-  for (const tier of TIER_ORDER) {
-    const list = grouped[tier];
-    if (!list || list.length === 0) continue;
-    if (!firstTier) y += TIER_GAP;
-    firstTier = false;
+  tierLayouts.forEach((t, idx) => {
+    if (idx > 0) y += TIER_GAP;
 
-    if (event.showTierLabels && tier !== 'GENERAL') {
-      const labelText = (tier === 'PRESENTING' ? event.topTierLabel : TIER_LABELS[tier]).toUpperCase();
+    if (t.labelHeight > 0) {
+      const labelText = (t.tier === 'PRESENTING' ? event.topTierLabel : TIER_LABELS[t.tier]).toUpperCase();
       ctx.font = `bold ${TIER_LABEL_FONT_SIZE}px "${FONT_BOLD}"`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillStyle = event.accentColor || '#e8384f';
       ctx.fillText(labelText, CANVAS_WIDTH / 2, y, CANVAS_WIDTH - SIDE_PAD * 2);
-      y += TIER_LABEL_HEIGHT + TIER_LABEL_GAP;
+      y += t.labelHeight;
     }
 
-    const columns = columnsForTier(tier, event.logosPerRow);
-    const cellHeight = cellHeightForTier(tier, event.generalScale);
-    const gridWidth = CANVAS_WIDTH - SIDE_PAD * 2;
-    const cellWidth = (gridWidth - CELL_GAP * (columns - 1)) / columns;
-
-    for (let i = 0; i < list.length; i++) {
-      const row = Math.floor(i / columns);
-      const col = i % columns;
-      const rowsInTier = tierRows(list.length, columns);
+    for (const row of t.rows) {
+      const innerCellWidth = t.cellWidth - CELL_INNER_PAD * 2;
       // Center the last (possibly partial) row.
-      const itemsInRow = row === rowsInTier - 1 ? list.length - row * columns : columns;
-      const rowOffsetX = ((columns - itemsInRow) * (cellWidth + CELL_GAP)) / 2;
+      const rowOffsetX = ((t.columns - row.items.length) * (t.cellWidth + CELL_GAP)) / 2;
 
-      const cellX = SIDE_PAD + rowOffsetX + col * (cellWidth + CELL_GAP);
-      const cellY = y + row * cellHeight;
+      row.items.forEach((item, col) => {
+        const cellX = SIDE_PAD + rowOffsetX + col * (t.cellWidth + CELL_GAP);
+        const innerX = cellX + CELL_INNER_PAD;
+        const innerY = y + CELL_INNER_PAD;
 
-      const innerX = cellX + CELL_INNER_PAD;
-      const innerY = cellY + CELL_INNER_PAD;
-      const innerW = cellWidth - CELL_INNER_PAD * 2;
-      const innerH = cellHeight - CELL_INNER_PAD * 2;
+        if (item.img) {
+          const dx = innerX + (innerCellWidth - item.drawW) / 2;
+          const dy = innerY + (row.innerHeight - item.drawH) / 2;
+          ctx.drawImage(item.img, dx, dy, item.drawW, item.drawH);
+        } else {
+          drawPlaceholder(ctx, item.sponsor.companyName, innerX, innerY, innerCellWidth, row.innerHeight);
+        }
+      });
 
-      const sponsor = list[i];
-      const img = await loadImageSafe(sponsor.logoPath);
-      if (img) {
-        drawContain(ctx, img, innerX, innerY, innerW, innerH);
-      } else {
-        drawPlaceholder(ctx, sponsor.companyName, innerX, innerY, innerW, innerH);
-      }
+      y += row.innerHeight + CELL_INNER_PAD * 2;
     }
-
-    y += tierRows(list.length, columns) * cellHeight;
-  }
+  });
 
   ctx.restore();
 
