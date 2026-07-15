@@ -32,6 +32,7 @@ export interface RenderEventInfo {
   logosPerRow: number;
   generalScale: number;
   showTierLabels: boolean;
+  bronzeGeneralDivider: boolean;
 }
 
 const CANVAS_WIDTH = 1000;
@@ -55,6 +56,15 @@ const CELL_INNER_PAD = 14;
 const TIER_LABEL_FONT_SIZE = 20;
 const TIER_LABEL_HEIGHT = 26;
 const TIER_LABEL_GAP = 10;
+
+const DIVIDER_EXTRA_GAP = 22;
+const DIVIDER_COLOR = '#d7dbe1';
+const DIVIDER_THICKNESS = 1.5;
+
+/** Extra vertical space to open up for the optional Bronze/General divider rule. */
+function dividerGap(prevTier: Tier | undefined, tier: Tier, enabled: boolean): number {
+  return enabled && prevTier === 'BRONZE' && tier === 'GENERAL' ? DIVIDER_EXTRA_GAP : 0;
+}
 
 // A pure contain-fit (min of width-scale/height-scale) makes wide "wordmark" logos fill
 // their cell edge-to-edge while square/tall logos hit the height limit first and end up
@@ -240,7 +250,9 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
 
   let bodyHeight = BODY_TOP_PAD;
   tierLayouts.forEach((t, idx) => {
-    if (idx > 0) bodyHeight += TIER_GAP;
+    if (idx > 0) {
+      bodyHeight += TIER_GAP + dividerGap(tierLayouts[idx - 1].tier, t.tier, event.bronzeGeneralDivider);
+    }
     bodyHeight += t.labelHeight;
     for (const row of t.rows) bodyHeight += row.innerHeight + CELL_INNER_PAD * 2;
   });
@@ -288,7 +300,20 @@ export async function renderEventImage(event: RenderEventInfo, sponsors: RenderS
   // Sponsor grid.
   let y = headerHeight + BODY_TOP_PAD;
   tierLayouts.forEach((t, idx) => {
-    if (idx > 0) y += TIER_GAP;
+    if (idx > 0) {
+      y += TIER_GAP;
+      const extraGap = dividerGap(tierLayouts[idx - 1].tier, t.tier, event.bronzeGeneralDivider);
+      if (extraGap > 0) {
+        const lineY = y + extraGap / 2;
+        ctx.strokeStyle = DIVIDER_COLOR;
+        ctx.lineWidth = DIVIDER_THICKNESS;
+        ctx.beginPath();
+        ctx.moveTo(SIDE_PAD, lineY);
+        ctx.lineTo(CANVAS_WIDTH - SIDE_PAD, lineY);
+        ctx.stroke();
+        y += extraGap;
+      }
+    }
 
     if (t.labelHeight > 0) {
       const labelText = (t.tier === 'PRESENTING' ? event.topTierLabel : TIER_LABELS[t.tier]).toUpperCase();

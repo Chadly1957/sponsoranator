@@ -7,6 +7,7 @@ import ColorField from '@/components/ColorField';
 import LogosPerRowField from '@/components/LogosPerRowField';
 import GeneralScaleField from '@/components/GeneralScaleField';
 import TierLabelsToggleField from '@/components/TierLabelsToggleField';
+import BronzeGeneralDividerField from '@/components/BronzeGeneralDividerField';
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function NewEventPage() {
   const [logosPerRow, setLogosPerRow] = useState(4);
   const [generalScale, setGeneralScale] = useState(1.2);
   const [showTierLabels, setShowTierLabels] = useState(false);
+  const [bronzeGeneralDivider, setBronzeGeneralDivider] = useState(false);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export default function NewEventPage() {
       form.set('logosPerRow', String(logosPerRow));
       form.set('generalScale', String(generalScale));
       form.set('showTierLabels', String(showTierLabels));
+      form.set('bronzeGeneralDivider', String(bronzeGeneralDivider));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
 
@@ -92,6 +95,8 @@ export default function NewEventPage() {
         <GeneralScaleField value={generalScale} onChange={setGeneralScale} />
 
         <TierLabelsToggleField value={showTierLabels} onChange={setShowTierLabels} />
+
+        <BronzeGeneralDividerField value={bronzeGeneralDivider} onChange={setBronzeGeneralDivider} />
 
         <div>
           <span className="mb-1 block text-sm font-medium text-gray-700">Event logo (optional)</span>

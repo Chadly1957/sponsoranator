@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     const logosPerRow = optionalLogosPerRow(form) ?? 4;
     const generalScale = optionalGeneralScale(form) ?? 1.2;
     const showTierLabels = optionalBoolean(form, 'showTierLabels') ?? false;
+    const bronzeGeneralDivider = optionalBoolean(form, 'bronzeGeneralDivider') ?? false;
     const logoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.create({
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
         logosPerRow,
         generalScale,
         showTierLabels,
+        bronzeGeneralDivider,
         logoPath: logoPath ?? null,
       },
     });

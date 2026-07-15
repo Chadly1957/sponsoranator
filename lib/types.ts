@@ -24,5 +24,6 @@ export interface EventDTO {
   logosPerRow: number;
   generalScale: number;
   showTierLabels: boolean;
+  bronzeGeneralDivider: boolean;
   sponsors: EventSponsorDTO[];
 }

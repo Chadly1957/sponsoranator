@@ -41,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const logosPerRow = optionalLogosPerRow(form);
     const generalScale = optionalGeneralScale(form);
     const showTierLabels = optionalBoolean(form, 'showTierLabels');
+    const bronzeGeneralDivider = optionalBoolean(form, 'bronzeGeneralDivider');
     const newLogoPath = await resolveLogoFromForm(form);
 
     const event = await prisma.event.update({
@@ -53,6 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(logosPerRow !== undefined ? { logosPerRow } : {}),
         ...(generalScale !== undefined ? { generalScale } : {}),
         ...(showTierLabels !== undefined ? { showTierLabels } : {}),
+        ...(bronzeGeneralDivider !== undefined ? { bronzeGeneralDivider } : {}),
         ...(newLogoPath ? { logoPath: newLogoPath } : {}),
       },
     });

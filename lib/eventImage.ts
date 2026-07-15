@@ -21,6 +21,7 @@ export async function generateEventPng(
       logosPerRow: event.logosPerRow,
       generalScale: event.generalScale,
       showTierLabels: event.showTierLabels,
+      bronzeGeneralDivider: event.bronzeGeneralDivider,
     },
     event.sponsors.map((s) => ({
       id: s.id,

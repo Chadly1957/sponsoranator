@@ -6,6 +6,7 @@ import ColorField from './ColorField';
 import LogosPerRowField from './LogosPerRowField';
 import GeneralScaleField from './GeneralScaleField';
 import TierLabelsToggleField from './TierLabelsToggleField';
+import BronzeGeneralDividerField from './BronzeGeneralDividerField';
 import AddSponsorForm from './AddSponsorForm';
 import SponsorRow from './SponsorRow';
 import { TIER_ORDER, TIER_LABELS } from '@/lib/tiers';
@@ -25,6 +26,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
   const [logosPerRow, setLogosPerRow] = useState(initialEvent.logosPerRow);
   const [generalScale, setGeneralScale] = useState(initialEvent.generalScale);
   const [showTierLabels, setShowTierLabels] = useState(initialEvent.showTierLabels);
+  const [bronzeGeneralDivider, setBronzeGeneralDivider] = useState(initialEvent.bronzeGeneralDivider);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
       form.set('logosPerRow', String(logosPerRow));
       form.set('generalScale', String(generalScale));
       form.set('showTierLabels', String(showTierLabels));
+      form.set('bronzeGeneralDivider', String(bronzeGeneralDivider));
       if (logo.file) form.set('file', logo.file);
       if (logo.url) form.set('url', logo.url);
       const res = await fetch(`/api/events/${event.id}`, { method: 'PATCH', body: form });
@@ -156,6 +159,7 @@ export default function EventEditor({ event: initialEvent }: { event: EventDTO }
           <LogosPerRowField value={logosPerRow} onChange={setLogosPerRow} />
           <GeneralScaleField value={generalScale} onChange={setGeneralScale} />
           <TierLabelsToggleField value={showTierLabels} onChange={setShowTierLabels} />
+          <BronzeGeneralDividerField value={bronzeGeneralDivider} onChange={setBronzeGeneralDivider} />
           <div>
             <span className="mb-1 block text-sm font-medium text-gray-700">Event logo</span>
             <LogoPicker onChange={setLogo} currentPreview={event.logoPath} />
