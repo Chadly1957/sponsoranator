@@ -5,6 +5,9 @@ import sharp from 'sharp';
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15MB
 const MAX_DIMENSION = 900;
+// No cap on decoded pixel count — sharp's default (~268MP) has rejected legitimate
+// large source images (e.g. hi-res scans); we resize down to MAX_DIMENSION regardless.
+const SHARP_OPTS = { limitInputPixels: false } as const;
 
 export class LogoError extends Error {}
 
@@ -51,7 +54,7 @@ interface CornerPixel {
 }
 
 async function samplePixel(buffer: Buffer, x: number, y: number): Promise<CornerPixel> {
-  const { data, info } = await sharp(buffer)
+  const { data, info } = await sharp(buffer, SHARP_OPTS)
     .ensureAlpha()
     .extract({ left: x, top: y, width: 1, height: 1 })
     .raw()
@@ -113,7 +116,7 @@ function detectBackground(corners: CornerPixel[]): BackgroundGuess {
  * Falls back to leaving the image untouched whenever it isn't confident (see detectBackground).
  */
 async function trimPadding(pngBuffer: Buffer): Promise<Buffer> {
-  const meta = await sharp(pngBuffer).metadata();
+  const meta = await sharp(pngBuffer, SHARP_OPTS).metadata();
   if (!meta.width || !meta.height) return pngBuffer;
 
   const corners = await Promise.all([
@@ -128,9 +131,9 @@ async function trimPadding(pngBuffer: Buffer): Promise<Buffer> {
 
   try {
     if (bg.kind === 'transparent') {
-      return await sharp(pngBuffer).trim({ threshold: 8 }).png().toBuffer();
+      return await sharp(pngBuffer, SHARP_OPTS).trim({ threshold: 8 }).png().toBuffer();
     }
-    return await sharp(pngBuffer)
+    return await sharp(pngBuffer, SHARP_OPTS)
       .trim({ background: `rgb(${bg.r},${bg.g},${bg.b})`, threshold: 24 })
       .png()
       .toBuffer();
@@ -143,10 +146,10 @@ async function trimPadding(pngBuffer: Buffer): Promise<Buffer> {
 
 /** Normalizes any input image buffer (png/jpg/webp/svg/gif) to a trimmed, size-capped PNG. */
 export async function normalizeToPng(input: Buffer): Promise<Buffer> {
-  let pipeline = sharp(input, { limitInputPixels: 40_000_000 }).png();
+  let pipeline = sharp(input, SHARP_OPTS).png();
 
   const pngBuffer = await pipeline.toBuffer();
-  pipeline = sharp(await trimPadding(pngBuffer));
+  pipeline = sharp(await trimPadding(pngBuffer), SHARP_OPTS);
 
   const meta = await pipeline.clone().metadata();
   if (meta.width && meta.height && (meta.width > MAX_DIMENSION || meta.height > MAX_DIMENSION)) {

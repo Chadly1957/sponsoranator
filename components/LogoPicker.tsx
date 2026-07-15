@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CropModal from './CropModal';
 
 export interface LogoValue {
   file: File | null;
@@ -23,6 +24,7 @@ export default function LogoPicker({ onChange, currentPreview, compact, initialU
   const [url, setUrl] = useState(initialUrl ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
 
   useEffect(() => {
     if (!file) {
@@ -40,6 +42,23 @@ export default function LogoPicker({ onChange, currentPreview, compact, initialU
   }, [mode, url, file]);
 
   const preview = mode === 'file' ? filePreview : url || currentPreview || null;
+
+  function openCrop() {
+    if (mode === 'file' && filePreview) {
+      // A local object URL is already same-origin — no proxy needed.
+      setCropSource(filePreview);
+    } else if (mode === 'url' && url.trim()) {
+      setCropSource(`/api/logo-proxy?url=${encodeURIComponent(url.trim())}`);
+    } else if (currentPreview) {
+      setCropSource(`/api/logo-proxy?url=${encodeURIComponent(currentPreview)}`);
+    }
+  }
+
+  function handleCropped(croppedFile: File) {
+    setFile(croppedFile);
+    setMode('file');
+    setCropSource(null);
+  }
 
   return (
     <div>
@@ -75,18 +94,34 @@ export default function LogoPicker({ onChange, currentPreview, compact, initialU
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       )}
-      {preview && !compact && (
-        <div className="mt-2 flex h-20 w-40 items-center justify-center rounded border border-gray-200 bg-white p-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={preview}
-            alt="Logo preview"
-            className="max-h-full max-w-full object-contain"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+      {preview && (
+        <div className="mt-2 flex items-center gap-2">
+          <div
+            className={`flex items-center justify-center rounded border border-gray-200 bg-white p-2 ${
+              compact ? 'h-12 w-20' : 'h-20 w-40'
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={preview}
+              alt="Logo preview"
+              className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={openCrop}
+            className="whitespace-nowrap text-xs font-medium text-brand hover:underline"
+          >
+            Crop
+          </button>
         </div>
+      )}
+      {cropSource && (
+        <CropModal imageSrc={cropSource} onCancel={() => setCropSource(null)} onCropped={handleCropped} />
       )}
     </div>
   );
