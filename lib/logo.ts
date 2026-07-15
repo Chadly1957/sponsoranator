@@ -43,18 +43,110 @@ export async function fetchImageFromUrl(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
+interface CornerPixel {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+async function samplePixel(buffer: Buffer, x: number, y: number): Promise<CornerPixel> {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .extract({ left: x, top: y, width: 1, height: 1 })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { r: data[0], g: data[1], b: data[2], a: info.channels === 4 ? data[3] : 255 };
+}
+
+/** First subset of `items` (at least `minSize` of them) that are all mutually "close". */
+function majorityCluster<T>(items: T[], close: (a: T, b: T) => boolean, minSize: number): T[] | null {
+  for (const seed of items) {
+    const cluster = items.filter((item) => close(item, seed));
+    if (cluster.length >= minSize) return cluster;
+  }
+  return null;
+}
+
+type BackgroundGuess =
+  | { kind: 'transparent' }
+  | { kind: 'color'; r: number; g: number; b: number }
+  | { kind: 'none' };
+
+/**
+ * Guesses a logo's background from its four corner pixels, requiring at least 3 of the 4
+ * to roughly agree before trusting it — a single corner where the design happens to touch
+ * the edge shouldn't throw off detection, but disagreement across the board means there's
+ * no confident "background" to trim (e.g. genuinely edge-to-edge art), so we leave it alone.
+ */
+function detectBackground(corners: CornerPixel[]): BackgroundGuess {
+  const transparentCluster = majorityCluster(corners, (a, b) => a.a < 20 && b.a < 20, 3);
+  if (transparentCluster) return { kind: 'transparent' };
+
+  const colorCluster = majorityCluster(
+    corners,
+    (a, b) =>
+      a.a > 200 &&
+      b.a > 200 &&
+      Math.abs(a.r - b.r) < 18 &&
+      Math.abs(a.g - b.g) < 18 &&
+      Math.abs(a.b - b.b) < 18,
+    3
+  );
+  if (colorCluster) {
+    return {
+      kind: 'color',
+      r: Math.round(colorCluster.reduce((s, c) => s + c.r, 0) / colorCluster.length),
+      g: Math.round(colorCluster.reduce((s, c) => s + c.g, 0) / colorCluster.length),
+      b: Math.round(colorCluster.reduce((s, c) => s + c.b, 0) / colorCluster.length),
+    };
+  }
+
+  return { kind: 'none' };
+}
+
+/**
+ * Crops away uniform padding around a logo before it's fit into its cell, so a tightly
+ * cropped mark and one buried in whitespace end up rendering at comparable sizes. Detects
+ * the padding color itself (rather than assuming pure white) by sampling the four corners,
+ * so it handles transparent PNGs, off-white/JPEG-noisy backgrounds, and colored mattes alike.
+ * Falls back to leaving the image untouched whenever it isn't confident (see detectBackground).
+ */
+async function trimPadding(pngBuffer: Buffer): Promise<Buffer> {
+  const meta = await sharp(pngBuffer).metadata();
+  if (!meta.width || !meta.height) return pngBuffer;
+
+  const corners = await Promise.all([
+    samplePixel(pngBuffer, 0, 0),
+    samplePixel(pngBuffer, meta.width - 1, 0),
+    samplePixel(pngBuffer, 0, meta.height - 1),
+    samplePixel(pngBuffer, meta.width - 1, meta.height - 1),
+  ]);
+  const bg = detectBackground(corners);
+
+  if (bg.kind === 'none') return pngBuffer;
+
+  try {
+    if (bg.kind === 'transparent') {
+      return await sharp(pngBuffer).trim({ threshold: 8 }).png().toBuffer();
+    }
+    return await sharp(pngBuffer)
+      .trim({ background: `rgb(${bg.r},${bg.g},${bg.b})`, threshold: 24 })
+      .png()
+      .toBuffer();
+  } catch {
+    // Not all images trim cleanly (e.g. a background that isn't actually uniform once sharp
+    // looks past the corners) — leave the image as-is rather than fail the whole import.
+    return pngBuffer;
+  }
+}
+
 /** Normalizes any input image buffer (png/jpg/webp/svg/gif) to a trimmed, size-capped PNG. */
 export async function normalizeToPng(input: Buffer): Promise<Buffer> {
   let pipeline = sharp(input, { limitInputPixels: 40_000_000 }).png();
 
-  try {
-    pipeline = sharp(await pipeline.toBuffer()).trim({ background: '#FFFFFF', threshold: 12 }).png();
-    // Validate the trim didn't throw and produced something usable.
-    await pipeline.clone().toBuffer();
-  } catch {
-    // Not all images trim cleanly (e.g. already-transparent art); fall back to untrimmed.
-    pipeline = sharp(input, { limitInputPixels: 40_000_000 }).png();
-  }
+  const pngBuffer = await pipeline.toBuffer();
+  pipeline = sharp(await trimPadding(pngBuffer));
 
   const meta = await pipeline.clone().metadata();
   if (meta.width && meta.height && (meta.width > MAX_DIMENSION || meta.height > MAX_DIMENSION)) {
@@ -66,7 +158,7 @@ export async function normalizeToPng(input: Buffer): Promise<Buffer> {
     });
   }
 
-  const buffer = await pipeline.toBuffer();
+  const buffer = await pipeline.png().toBuffer();
   if (!buffer.length) {
     throw new LogoError('Could not process that image.');
   }
