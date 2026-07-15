@@ -27,6 +27,7 @@ export default function SponsorRow({
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tierError, setTierError] = useState<string | null>(null);
 
   async function saveCompany() {
     setSaving(true);
@@ -49,11 +50,21 @@ export default function SponsorRow({
   }
 
   async function changeTier(tier: string) {
-    await fetch(`/api/events/${eventId}/sponsors/${sponsor.id}`, {
+    setTierError(null);
+    const res = await fetch(`/api/events/${eventId}/sponsors/${sponsor.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tier }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setTierError(
+        data?.error === 'That combination already exists.'
+          ? `${sponsor.company.name} is already added at that level.`
+          : data?.error || 'Failed to change level.'
+      );
+      return;
+    }
     onChanged();
   }
 
@@ -94,6 +105,7 @@ export default function SponsorRow({
             </option>
           ))}
         </select>
+        {tierError && <span className="basis-full text-xs text-red-600">{tierError}</span>}
         <button
           type="button"
           className="btn-secondary px-2 py-1 text-xs"

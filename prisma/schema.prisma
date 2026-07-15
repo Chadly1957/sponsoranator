@@ -32,6 +32,8 @@ model Event {
   generalScale    Float          @default(1.2)
   // Draws a category label (e.g. "Gold") above each tier's row block, except General.
   showTierLabels  Boolean        @default(false)
+  // Draws a horizontal rule between the Bronze and General rows, when both are present.
+  bronzeGeneralDivider Boolean   @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   sponsors        EventSponsor[]
@@ -48,5 +50,7 @@ model EventSponsor {
   event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@unique([eventId, companyId])
+  // A company can sponsor the same event at multiple tiers (e.g. General + Bronze), each
+  // showing its logo in that tier's row — but not be added twice at the *same* tier.
+  @@unique([eventId, companyId, tier])
 }

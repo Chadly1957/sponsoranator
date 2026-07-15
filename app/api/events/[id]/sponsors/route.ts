@@ -38,9 +38,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       _max: { order: true },
     });
 
+    // A company can sponsor the same event at multiple tiers (its logo then shows up in
+    // each). Re-submitting the same company at a tier it's already at is a no-op, not a
+    // duplicate — the upsert just returns the existing row untouched.
     const sponsor = await prisma.eventSponsor.upsert({
-      where: { eventId_companyId: { eventId: params.id, companyId: resolvedCompanyId } },
-      update: { tier },
+      where: { eventId_companyId_tier: { eventId: params.id, companyId: resolvedCompanyId, tier } },
+      update: {},
       create: {
         eventId: params.id,
         companyId: resolvedCompanyId,

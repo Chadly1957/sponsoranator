@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { LogoError, importLogoFromUpload, importLogoFromUrl } from './logo';
 import { clampGeneralScale, clampLogosPerRow } from './tiers';
@@ -5,6 +6,12 @@ import { clampGeneralScale, clampLogosPerRow } from './tiers';
 export function errorResponse(err: unknown) {
   if (err instanceof LogoError) {
     return NextResponse.json({ error: err.message }, { status: 400 });
+  }
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    return NextResponse.json(
+      { error: 'That combination already exists.' },
+      { status: 409 }
+    );
   }
   console.error(err);
   const message = err instanceof Error ? err.message : 'Something went wrong.';
