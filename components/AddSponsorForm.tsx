@@ -21,18 +21,27 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
 
   const [autoFinding, setAutoFinding] = useState(false);
   const [autoFindMessage, setAutoFindMessage] = useState<string | null>(null);
+  const [suggestedName, setSuggestedName] = useState<string | null>(null);
   const [discoveredUrl, setDiscoveredUrl] = useState<string | undefined>(undefined);
   const [pickerKey, setPickerKey] = useState(0);
 
   function handleQueryChange(next: string) {
     setQuery(next);
     setAutoFindMessage(null);
+    setSuggestedName(null);
+  }
+
+  function acceptSuggestedName() {
+    if (!suggestedName) return;
+    setQuery(suggestedName);
+    setSuggestedName(null);
   }
 
   async function handleAutoFind() {
     if (!query.trim()) return;
     setAutoFinding(true);
     setAutoFindMessage(null);
+    setSuggestedName(null);
     try {
       const res = await fetch('/api/logo-lookup', {
         method: 'POST',
@@ -42,19 +51,20 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Lookup failed.');
 
-      if (data.suggestedName) setQuery(data.suggestedName);
+      // Never silently replace what the user typed — offer it as a suggestion they have to
+      // accept. Auto-overwriting here previously made it easy to submit "mbi.com" as-is
+      // (or a wrong derived name) without noticing, since the field wasn't what you typed.
+      if (data.suggestedName && data.suggestedName !== query.trim()) {
+        setSuggestedName(data.suggestedName);
+      }
 
       if (data.url) {
         setDiscoveredUrl(data.url);
         setLogo({ file: null, url: data.url });
         setPickerKey((k) => k + 1);
-        setAutoFindMessage(
-          data.suggestedName
-            ? 'Found a logo and company name below — double check them before adding.'
-            : 'Found a logo below — double check it before adding.'
-        );
+        setAutoFindMessage('Found a logo below — double check it before adding.');
       } else if (data.suggestedName) {
-        setAutoFindMessage("Found the company name, but couldn't find a logo. Paste a URL or upload one below.");
+        setAutoFindMessage("Couldn't find a logo automatically. Paste a URL or upload one below.");
       } else {
         setAutoFindMessage("Couldn't find a logo automatically. Paste a URL or upload one instead.");
       }
@@ -70,6 +80,12 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
     if (!selected && !query.trim()) {
       setError('Pick a company from the library or type a new company name.');
       return;
+    }
+    if (!selected && !logo.file && !logo.url) {
+      const proceed = confirm(
+        `Add "${query.trim()}" without a logo? You can add one later by editing it in the sponsor list.`
+      );
+      if (!proceed) return;
     }
     setSubmitting(true);
     setError(null);
@@ -92,6 +108,7 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
       setTier('GENERAL');
       setDiscoveredUrl(undefined);
       setAutoFindMessage(null);
+      setSuggestedName(null);
       setPickerKey((k) => k + 1);
       onAdded();
     } catch (err) {
@@ -117,6 +134,14 @@ export default function AddSponsorForm({ eventId, onAdded }: Props) {
           <p className="mt-1 text-xs text-gray-400">
             Tip: you can paste the company&apos;s website (e.g. acmetrucking.com) instead of typing a
             name — auto-find will fill in both the name and logo.
+          </p>
+        )}
+        {suggestedName && (
+          <p className="mt-1 text-xs text-gray-500">
+            Guessed name from that website:{' '}
+            <button type="button" onClick={acceptSuggestedName} className="font-medium text-brand hover:underline">
+              Use &quot;{suggestedName}&quot;
+            </button>
           </p>
         )}
       </div>

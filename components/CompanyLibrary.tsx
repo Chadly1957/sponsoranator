@@ -18,6 +18,8 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
   const [editLogo, setEditLogo] = useState<LogoValue>({ file: null, url: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -91,8 +93,20 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
       )
     )
       return;
-    await fetch(`/api/companies/${company.id}`, { method: 'DELETE' });
-    await refresh();
+    setDeleteError(null);
+    setDeletingId(company.id);
+    try {
+      const res = await fetch(`/api/companies/${company.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `Failed to delete "${company.name}".`);
+      }
+      await refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -133,6 +147,12 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
             onChange={(e) => setSearch(e.target.value)}
           />
 
+          {deleteError && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {deleteError}
+            </div>
+          )}
+
           <div className="card divide-y divide-gray-100">
             {filtered.length === 0 && (
               <p className="px-4 py-8 text-center text-sm text-gray-500">No companies found.</p>
@@ -164,8 +184,9 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
                     type="button"
                     className="btn-danger px-2 py-1 text-xs"
                     onClick={() => remove(company)}
+                    disabled={deletingId === company.id}
                   >
-                    Delete
+                    {deletingId === company.id ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
 

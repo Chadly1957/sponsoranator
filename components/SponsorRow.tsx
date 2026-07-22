@@ -28,6 +28,8 @@ export default function SponsorRow({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   async function saveCompany() {
     setSaving(true);
@@ -70,8 +72,20 @@ export default function SponsorRow({
 
   async function remove() {
     if (!confirm(`Remove ${sponsor.company.name} from this event?`)) return;
-    await fetch(`/api/events/${eventId}/sponsors/${sponsor.id}`, { method: 'DELETE' });
-    onChanged();
+    setRemoveError(null);
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/sponsors/${sponsor.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Failed to remove sponsor.');
+      }
+      onChanged();
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setRemoving(false);
+    }
   }
 
   return (
@@ -125,9 +139,10 @@ export default function SponsorRow({
         <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => setEditing((v) => !v)}>
           Edit
         </button>
-        <button type="button" className="btn-danger px-2 py-1 text-xs" onClick={remove}>
-          Remove
+        <button type="button" className="btn-danger px-2 py-1 text-xs" onClick={remove} disabled={removing}>
+          {removing ? 'Removing…' : 'Remove'}
         </button>
+        {removeError && <span className="basis-full text-xs text-red-600">{removeError}</span>}
       </div>
 
       {editing && (
