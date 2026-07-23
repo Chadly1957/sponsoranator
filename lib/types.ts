@@ -3,6 +3,7 @@ export interface CompanyDTO {
   name: string;
   logoPath: string | null;
   sourceUrl: string | null;
+  logoScale: number;
 }
 
 export interface EventSponsorDTO {
@@ -11,6 +12,7 @@ export interface EventSponsorDTO {
   companyId: string;
   tier: string;
   order: number;
+  scale: number;
   company: CompanyDTO;
 }
 

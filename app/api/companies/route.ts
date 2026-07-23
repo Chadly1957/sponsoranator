@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { errorResponse, requireString, resolveLogoFromForm } from '@/lib/api-helpers';
+import { errorResponse, optionalLogoScale, requireString, resolveLogoFromForm } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +19,15 @@ export async function POST(req: NextRequest) {
     const name = requireString(form, 'name');
     const url = typeof form.get('url') === 'string' ? (form.get('url') as string).trim() : undefined;
     const logoPath = await resolveLogoFromForm(form);
+    const logoScale = optionalLogoScale(form);
 
     const company = await prisma.company.create({
-      data: { name, logoPath: logoPath ?? null, sourceUrl: url || null },
+      data: {
+        name,
+        logoPath: logoPath ?? null,
+        sourceUrl: url || null,
+        ...(logoScale !== undefined ? { logoScale } : {}),
+      },
     });
     return NextResponse.json({ company }, { status: 201 });
   } catch (err) {

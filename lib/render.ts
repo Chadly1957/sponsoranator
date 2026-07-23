@@ -21,6 +21,8 @@ export interface RenderSponsor {
   logoPath: string | null;
   tier: string;
   order: number;
+  /** Manual size multiplier (company default x per-sponsorship override), 1 = no change. */
+  scale: number;
 }
 
 export interface RenderEventInfo {
@@ -208,7 +210,23 @@ async function buildTierRows(
     const items: RowItem[] = withImages.map(({ sponsor, img }) => {
       if (!img) return { sponsor, img: null, drawW: 0, drawH: 0 };
       const scale = Math.min(innerWidth / img.width, rowInnerHeight / img.height);
-      return { sponsor, img, drawW: img.width * scale, drawH: img.height * scale };
+      let drawW = img.width * scale;
+      let drawH = img.height * scale;
+
+      // Manual per-logo size override (Company.logoScale x EventSponsor.scale). Applied only
+      // to this item's own drawn size — it doesn't affect the row's height or its neighbors —
+      // and clamped so it can grow into the cell's padding but never past the cell/row
+      // boundary shared with adjacent logos.
+      const manualScale = sponsor.scale ?? 1;
+      if (manualScale !== 1 && drawW > 0 && drawH > 0) {
+        const maxW = cellWidth;
+        const maxH = rowInnerHeight + CELL_INNER_PAD * 2;
+        const boundedScale = Math.min(manualScale, maxW / drawW, maxH / drawH);
+        drawW *= boundedScale;
+        drawH *= boundedScale;
+      }
+
+      return { sponsor, img, drawW, drawH };
     });
 
     rows.push({ items, innerHeight: rowInnerHeight });

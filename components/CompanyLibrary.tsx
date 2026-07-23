@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import LogoPicker, { LogoValue } from './LogoPicker';
+import LogoScaleField from './LogoScaleField';
+import { LOGO_SCALE_DEFAULT } from '@/lib/tiers';
 import type { CompanyDTO } from '@/lib/types';
 
 export default function CompanyLibrary({ initialCompanies }: { initialCompanies: CompanyDTO[] }) {
@@ -10,12 +12,14 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
 
   const [newName, setNewName] = useState('');
   const [newLogo, setNewLogo] = useState<LogoValue>({ file: null, url: '' });
+  const [newLogoScale, setNewLogoScale] = useState(LOGO_SCALE_DEFAULT);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editLogo, setEditLogo] = useState<LogoValue>({ file: null, url: '' });
+  const [editLogoScale, setEditLogoScale] = useState(LOGO_SCALE_DEFAULT);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -46,11 +50,13 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
       form.set('name', newName.trim());
       if (newLogo.file) form.set('file', newLogo.file);
       if (newLogo.url) form.set('url', newLogo.url);
+      form.set('logoScale', String(newLogoScale));
       const res = await fetch('/api/companies', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to add company.');
       setNewName('');
       setNewLogo({ file: null, url: '' });
+      setNewLogoScale(LOGO_SCALE_DEFAULT);
       await refresh();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -63,6 +69,7 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
     setEditingId(company.id);
     setEditName(company.name);
     setEditLogo({ file: null, url: '' });
+    setEditLogoScale(company.logoScale ?? LOGO_SCALE_DEFAULT);
     setEditError(null);
   }
 
@@ -74,6 +81,7 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
       if (editName.trim() && editName.trim() !== company.name) form.set('name', editName.trim());
       if (editLogo.file) form.set('file', editLogo.file);
       if (editLogo.url) form.set('url', editLogo.url);
+      form.set('logoScale', String(editLogoScale));
       const res = await fetch(`/api/companies/${company.id}`, { method: 'PATCH', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save.');
@@ -130,6 +138,12 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
               <span className="mb-1 block text-sm font-medium text-gray-700">Logo (optional)</span>
               <LogoPicker onChange={setNewLogo} />
             </div>
+            <LogoScaleField
+              label="Logo size"
+              hint="Default size for this logo everywhere it's used — nudge it up if it tends to look small next to others."
+              value={newLogoScale}
+              onChange={setNewLogoScale}
+            />
             {createError && <p className="text-sm text-red-600">{createError}</p>}
             <div className="flex justify-end">
               <button type="submit" className="btn-primary" disabled={creating}>
@@ -204,6 +218,12 @@ export default function CompanyLibrary({ initialCompanies }: { initialCompanies:
                       <span className="mb-1 block text-xs font-medium text-gray-700">Replace logo</span>
                       <LogoPicker onChange={setEditLogo} currentPreview={company.logoPath} compact />
                     </div>
+                    <LogoScaleField
+                      label="Logo size"
+                      hint="Default size for this logo everywhere it's used."
+                      value={editLogoScale}
+                      onChange={setEditLogoScale}
+                    />
                     {editError && <p className="text-xs text-red-600">{editError}</p>}
                     <div className="flex justify-end gap-2">
                       <button

@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Company" ADD COLUMN     "logoScale" DOUBLE PRECISION NOT NULL DEFAULT 1;
+
+-- AlterTable
+ALTER TABLE "EventSponsor" ADD COLUMN     "scale" DOUBLE PRECISION NOT NULL DEFAULT 1;
+

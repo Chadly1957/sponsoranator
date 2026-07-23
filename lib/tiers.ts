@@ -54,6 +54,19 @@ export function cellHeightForTier(tier: Tier, generalScale: number): number {
   return TIER_CELL_HEIGHT[tier];
 }
 
+// Manual per-logo size multiplier, used both as a company's library-wide default
+// (Company.logoScale) and as a per-sponsorship override (EventSponsor.scale) — the two
+// multiply together to get the logo's final effective size in a given event image.
+export const LOGO_SCALE_MIN = 0.5;
+export const LOGO_SCALE_MAX = 2;
+export const LOGO_SCALE_DEFAULT = 1;
+export const LOGO_SCALE_STEP = 0.05;
+
+export function clampLogoScale(value: number): number {
+  if (Number.isNaN(value)) return LOGO_SCALE_DEFAULT;
+  return Math.min(LOGO_SCALE_MAX, Math.max(LOGO_SCALE_MIN, value));
+}
+
 export function tierRank(tier: string): number {
   const idx = TIER_ORDER.indexOf(tier as Tier);
   return idx === -1 ? TIER_ORDER.length : idx;

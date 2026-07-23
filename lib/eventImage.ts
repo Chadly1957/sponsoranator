@@ -29,6 +29,7 @@ export async function generateEventPng(
       logoPath: s.company.logoPath,
       tier: s.tier,
       order: s.order,
+      scale: (s.company.logoScale ?? 1) * (s.scale ?? 1),
     }))
   );
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/api-helpers';
-import { TIER_ORDER } from '@/lib/tiers';
+import { clampLogoScale, TIER_ORDER } from '@/lib/tiers';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const data: { tier?: string; order?: number } = {};
+    const data: { tier?: string; order?: number; scale?: number } = {};
 
     if (typeof body.tier === 'string') {
       const upper = body.tier.toUpperCase();
@@ -22,6 +22,9 @@ export async function PATCH(
     }
     if (typeof body.order === 'number') {
       data.order = body.order;
+    }
+    if (typeof body.scale === 'number') {
+      data.scale = clampLogoScale(body.scale);
     }
 
     const sponsor = await prisma.eventSponsor.update({

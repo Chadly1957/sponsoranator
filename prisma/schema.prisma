@@ -12,6 +12,9 @@ model Company {
   name          String
   logoPath      String?
   sourceUrl     String?
+  // Default size multiplier for this logo (0.5-2.0), applied everywhere it's used unless
+  // a specific sponsorship overrides it further via EventSponsor.scale.
+  logoScale     Float          @default(1)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   eventSponsors EventSponsor[]
@@ -45,6 +48,9 @@ model EventSponsor {
   companyId String
   tier      String      @default("GENERAL")
   order     Int         @default(0)
+  // Extra size multiplier (0.5-2.0) for this specific sponsorship's logo, on top of the
+  // company's own logoScale — lets a logo be nudged bigger/smaller just for this placement.
+  scale     Float       @default(1)
   createdAt DateTime    @default(now())
 
   event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)

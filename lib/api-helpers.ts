@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { LogoError, importLogoFromUpload, importLogoFromUrl } from './logo';
-import { clampGeneralScale, clampLogosPerRow } from './tiers';
+import { clampGeneralScale, clampLogoScale, clampLogosPerRow } from './tiers';
 
 export function errorResponse(err: unknown) {
   if (err instanceof LogoError) {
@@ -64,6 +64,15 @@ export function optionalGeneralScale(form: FormData): number | undefined {
   const parsed = Number(value);
   if (Number.isNaN(parsed)) return undefined;
   return clampGeneralScale(parsed);
+}
+
+/** Reads a "logoScale" field from FormData, clamped to 0.5-2.0. Undefined if not present. */
+export function optionalLogoScale(form: FormData): number | undefined {
+  const value = form.get('logoScale');
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return undefined;
+  return clampLogoScale(parsed);
 }
 
 export function optionalBoolean(form: FormData, key: string): boolean | undefined {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { errorResponse, optionalString, resolveLogoFromForm } from '@/lib/api-helpers';
+import { errorResponse, optionalLogoScale, optionalString, resolveLogoFromForm } from '@/lib/api-helpers';
 import { deleteLogoFile } from '@/lib/logo';
 
 export const dynamic = 'force-dynamic';
@@ -19,12 +19,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const form = await req.formData();
     const name = optionalString(form, 'name');
     const newLogoPath = await resolveLogoFromForm(form);
+    const logoScale = optionalLogoScale(form);
 
     const company = await prisma.company.update({
       where: { id: params.id },
       data: {
         ...(name ? { name } : {}),
         ...(newLogoPath ? { logoPath: newLogoPath } : {}),
+        ...(logoScale !== undefined ? { logoScale } : {}),
       },
     });
 

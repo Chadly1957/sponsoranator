@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import LogoPicker, { LogoValue } from './LogoPicker';
-import { TIER_ORDER, TIER_LABELS } from '@/lib/tiers';
+import LogoScaleField from './LogoScaleField';
+import { TIER_ORDER, TIER_LABELS, LOGO_SCALE_DEFAULT } from '@/lib/tiers';
 import type { EventSponsorDTO } from '@/lib/types';
 
 interface Props {
@@ -25,6 +26,7 @@ export default function SponsorRow({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(sponsor.company.name);
   const [logo, setLogo] = useState<LogoValue>({ file: null, url: '' });
+  const [scale, setScale] = useState(sponsor.scale ?? LOGO_SCALE_DEFAULT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
@@ -42,6 +44,19 @@ export default function SponsorRow({
       const res = await fetch(`/api/companies/${sponsor.companyId}`, { method: 'PATCH', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update company.');
+
+      if (scale !== (sponsor.scale ?? LOGO_SCALE_DEFAULT)) {
+        const scaleRes = await fetch(`/api/events/${eventId}/sponsors/${sponsor.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scale }),
+        });
+        if (!scaleRes.ok) {
+          const scaleData = await scaleRes.json().catch(() => null);
+          throw new Error(scaleData?.error || 'Failed to update logo size.');
+        }
+      }
+
       setEditing(false);
       onChanged();
     } catch (err) {
@@ -155,6 +170,12 @@ export default function SponsorRow({
             <span className="mb-1 block text-xs font-medium text-gray-700">Replace logo</span>
             <LogoPicker onChange={setLogo} currentPreview={sponsor.company.logoPath} compact />
           </div>
+          <LogoScaleField
+            label="Logo size in this event"
+            hint="Only affects this sponsorship — nudge it up or down to match the other logos in its row."
+            value={scale}
+            onChange={setScale}
+          />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={() => setEditing(false)}>
