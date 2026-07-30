@@ -18,6 +18,7 @@ model Company {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   eventSponsors EventSponsor[]
+  signs         Sign[]
 
   @@index([name])
 }
@@ -59,4 +60,82 @@ model EventSponsor {
   // A company can sponsor the same event at multiple tiers (e.g. General + Bronze), each
   // showing its logo in that tier's row — but not be added twice at the *same* tier.
   @@unique([eventId, companyId, tier])
+}
+
+// A reusable blank sign design: one or more physical sizes (e.g. "Small" / "Large"), each
+// with its own uploaded blank PDF and its own text/logo placeholder box, saved once and
+// reused across any number of sign sets.
+model SignTemplate {
+  id        String             @id @default(cuid())
+  name      String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  sizes     SignTemplateSize[]
+  signSets  SignSet[]
+}
+
+model SignTemplateSize {
+  id         String   @id @default(cuid())
+  templateId String
+  // e.g. "Small (8.5x11)" — matched (case-insensitively) against the "Size" column of an
+  // imported sign list.
+  label      String
+  pdfPath    String
+  // Page dimensions in PDF points, read from the uploaded PDF at upload time.
+  pageWidth  Float
+  pageHeight Float
+  // Placeholder boxes, in PDF points, measured from the page's top-left corner (converted
+  // to PDF's bottom-left origin at render time) — matches how the editor UI positions them.
+  textBoxX  Float @default(0)
+  textBoxY  Float @default(0)
+  textBoxW  Float @default(0)
+  textBoxH  Float @default(0)
+  logoBoxX  Float @default(0)
+  logoBoxY  Float @default(0)
+  logoBoxW  Float @default(0)
+  logoBoxH  Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  template SignTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  signs    Sign[]
+
+  @@unique([templateId, label])
+}
+
+// One batch of signs generated for an event occasion from an uploaded sign list.
+model SignSet {
+  id         String   @id @default(cuid())
+  name       String
+  templateId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template SignTemplate @relation(fields: [templateId], references: [id])
+  signs    Sign[]
+}
+
+// One generated sign, corresponding to one row of an imported sign list.
+model Sign {
+  id              String  @id @default(cuid())
+  signSetId       String
+  templateSizeId  String?
+  companyId       String?
+  // Raw values from the imported row (kept even if companyId / templateSizeId couldn't be
+  // resolved, so the row is still visible and fixable in the UI).
+  companyName     String
+  sponsorship     String  @default("")
+  sizeLabel       String
+  // Per-sign overrides — set when the sign is edited individually after generation.
+  textOverride    String?
+  order           Int     @default(0)
+  pdfPath         String?
+  status          String  @default("pending") // ready | needs_attention
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  signSet      SignSet           @relation(fields: [signSetId], references: [id], onDelete: Cascade)
+  templateSize SignTemplateSize? @relation(fields: [templateSizeId], references: [id])
+  company      Company?          @relation(fields: [companyId], references: [id])
 }
