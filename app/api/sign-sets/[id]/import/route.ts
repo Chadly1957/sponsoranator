@@ -44,14 +44,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           ? `No sign size matches "${row.size}" — edit this sign to pick one.`
           : 'No size was specified for this row.';
       } else {
+        const issues: string[] = [];
+        if (!row.sponsorship) {
+          issues.push('No sponsorship title in the sign list — edit this sign to add one.');
+        }
         if (!company) {
+          issues.push(`"${row.company}" isn't in the logo library — generated without a logo.`);
+        }
+        if (issues.length > 0) {
           status = 'needs_attention';
-          note = `"${row.company}" isn't in the logo library — generated without a logo.`;
+          note = issues.join(' ');
         }
         try {
           const rendered = await renderSignRecord({
             templateSize,
-            companyName: row.company,
             sponsorship: row.sponsorship,
             logoPath: company?.logoPath ?? null,
           });

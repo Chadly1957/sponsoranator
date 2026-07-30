@@ -31,10 +31,11 @@ export async function findCompanyByName(name: string) {
   return prisma.company.findFirst({ where: { name: { equals: trimmed, mode: 'insensitive' } } });
 }
 
-/** Renders one sign's PDF from a resolved template size + company/text content. */
+/** Renders one sign's PDF from a resolved template size — the text box shows the sponsorship
+ *  title (e.g. "Hole Sponsor") unless manually overridden; the logo box shows the company's
+ *  logo from the library. */
 export async function renderSignRecord(opts: {
   templateSize: TemplateSizeGeometry;
-  companyName: string;
   sponsorship: string;
   textOverride?: string | null;
   logoPath?: string | null;
@@ -66,9 +67,7 @@ export async function renderSignRecord(opts: {
       w: opts.templateSize.logoBoxW,
       h: opts.templateSize.logoBoxH,
     },
-    titleText: opts.companyName,
-    subtitleText: opts.sponsorship,
-    rawText: opts.textOverride,
+    text: opts.textOverride?.trim() ? opts.textOverride : opts.sponsorship,
     logoBytes,
   });
 }

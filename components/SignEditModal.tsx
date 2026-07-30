@@ -56,12 +56,14 @@ export default function SignEditModal({ sign, sizes, onClose, onSaved }: Props) 
 
         <div className="flex-1 space-y-4 overflow-auto p-5">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">Company</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">Company (supplies the logo)</span>
             <CompanyCombobox value={company} onSelect={setCompany} query={query} onQueryChange={setQuery} />
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">Sponsorship level</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">
+              Sponsorship title (printed on the sign)
+            </span>
             <input className="input" value={sponsorship} onChange={(e) => setSponsorship(e.target.value)} />
           </label>
 
@@ -93,7 +95,8 @@ export default function SignEditModal({ sign, sizes, onClose, onSaved }: Props) 
             )}
             {!useOverride && (
               <p className="text-xs text-gray-500">
-                By default the sign shows the company name and sponsorship level.
+                By default the sign's text shows the sponsorship title above (e.g. "Dinner
+                Sponsor") — the company only supplies the logo.
               </p>
             )}
           </div>

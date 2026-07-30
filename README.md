@@ -21,12 +21,14 @@ Silver/Bronze/General below in tighter grids).
   Upload a blank sign PDF for each physical size you use (e.g. small/large),
   position a logo and text placeholder once per size, then upload an
   event's sign list (an .xlsx/.csv with **Sponsorship**, **Company**, and
-  **Size** columns) to generate every sign automatically — pulling each
-  company's logo from the same Logo Library used for sponsor walls. Rows
-  are matched by company name and by size label; anything that doesn't
-  match (unknown company, unrecognized size) is still created and flagged
-  "needs attention" so it's easy to find and fix. Download everything as a
-  `.zip`, or edit and re-download any sign individually.
+  **Size** columns) to generate every sign automatically. Each sign prints
+  the **Sponsorship** value as its title (e.g. "Dinner Sponsor", "Hole
+  Sponsor") and pulls the matching **Company**'s logo from the same Logo
+  Library used for sponsor walls. Rows are matched by company name and by
+  size label; anything that doesn't match (unknown company, unrecognized
+  size, missing sponsorship title) is still created and flagged "needs
+  attention" so it's easy to find and fix. Download everything as a `.zip`,
+  or edit and re-download any sign individually.
 
 ## Deploying to Vercel
 

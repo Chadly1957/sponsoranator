@@ -90,7 +90,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       try {
         const rendered = await renderSignRecord({
           templateSize,
-          companyName,
           sponsorship,
           textOverride,
           logoPath: company?.logoPath ?? null,

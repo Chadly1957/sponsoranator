@@ -45,30 +45,20 @@ function wrapText(font: PDFFont, text: string, size: number, maxWidth: number): 
   return lines;
 }
 
-interface TextBlockSpec {
-  text: string;
-  font: PDFFont;
-  baseSize: number;
-}
-
 export interface RenderSignOptions {
   templatePdfBytes: Buffer | Uint8Array;
   pageWidth: number;
   pageHeight: number;
   textBox: PdfBox;
   logoBox: PdfBox;
-  /** Company name — used as the bold title line unless `rawText` overrides it entirely. */
-  titleText: string;
-  /** Sponsorship level (e.g. "Gold Sponsor") — shown as a smaller line under the title. */
-  subtitleText?: string;
-  /** A manually edited replacement for the auto-generated title/subtitle, verbatim (supports \n). */
-  rawText?: string | null;
+  /** The sign's text — normally the sponsorship title (e.g. "Dinner Sponsor"). */
+  text: string;
   logoBytes?: Buffer | null;
 }
 
 /**
- * Draws a company logo and text (company name + sponsorship level, or a manual override)
- * into a blank template PDF's placeholder boxes, shrinking the text to fit if needed.
+ * Draws a sponsoring company's logo and a title (the sponsorship being recognized, e.g.
+ * "Hole Sponsor") into a blank template PDF's placeholder boxes, shrinking the text to fit.
  */
 export async function renderSignPdf(opts: RenderSignOptions): Promise<Buffer> {
   const pdfDoc = await PDFDocument.load(opts.templatePdfBytes);
@@ -100,48 +90,35 @@ export async function renderSignPdf(opts: RenderSignOptions): Promise<Buffer> {
     }
   }
 
-  if (opts.textBox.w > 0 && opts.textBox.h > 0) {
+  if (opts.textBox.w > 0 && opts.textBox.h > 0 && opts.text.trim()) {
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const box = toBottomBox(opts.textBox, opts.pageHeight);
-
-    const blocks: TextBlockSpec[] = [];
-    if (opts.rawText && opts.rawText.trim()) {
-      blocks.push({ text: opts.rawText, font: bold, baseSize: box.h * 0.3 });
-    } else {
-      blocks.push({ text: opts.titleText, font: bold, baseSize: box.h * 0.32 });
-      if (opts.subtitleText && opts.subtitleText.trim()) {
-        blocks.push({ text: opts.subtitleText, font: regular, baseSize: box.h * 0.18 });
-      }
-    }
+    const baseSize = box.h * 0.4;
 
     let scale = 1;
-    let wrapped: { lines: string[]; font: PDFFont; size: number }[] = [];
+    let lines: string[] = [];
+    let size = baseSize;
     for (let attempt = 0; attempt < 8; attempt++) {
-      wrapped = blocks.map((b) => {
-        const size = Math.max(6, b.baseSize * scale);
-        return { lines: wrapText(b.font, b.text, size, box.w), font: b.font, size };
-      });
-      const totalHeight = wrapped.reduce((sum, b) => sum + b.lines.length * b.size * 1.25, 0);
+      size = Math.max(6, baseSize * scale);
+      lines = wrapText(bold, opts.text, size, box.w);
+      const totalHeight = lines.length * size * 1.25;
       if (totalHeight <= box.h || scale <= 0.25) break;
       scale *= 0.85;
     }
 
-    const totalHeight = wrapped.reduce((sum, b) => sum + b.lines.length * b.size * 1.25, 0);
+    const lineHeight = size * 1.25;
+    const totalHeight = lines.length * lineHeight;
     let cursorY = box.yBottom + box.h - (box.h - totalHeight) / 2;
-    for (const block of wrapped) {
-      const lineHeight = block.size * 1.25;
-      for (const line of block.lines) {
-        cursorY -= lineHeight;
-        const width = block.font.widthOfTextAtSize(line, block.size);
-        page.drawText(line, {
-          x: box.x + (box.w - width) / 2,
-          y: cursorY + lineHeight * 0.22,
-          size: block.size,
-          font: block.font,
-          color: rgb(0, 0, 0),
-        });
-      }
+    for (const line of lines) {
+      cursorY -= lineHeight;
+      const width = bold.widthOfTextAtSize(line, size);
+      page.drawText(line, {
+        x: box.x + (box.w - width) / 2,
+        y: cursorY + lineHeight * 0.22,
+        size,
+        font: bold,
+        color: rgb(0, 0, 0),
+      });
     }
   }
 
