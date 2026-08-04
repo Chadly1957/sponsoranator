@@ -17,6 +17,18 @@ Silver/Bronze/General below in tighter grids).
 - **Export** — download the composed PNG for the day's email, or export a
   `.zip` of every sponsor logo in the event (named after the company) for
   handing off to a designer.
+- **Sign Creator** — replaces manually building sponsor signs in InDesign.
+  Upload a blank sign PDF for each physical size you use (e.g. small/large),
+  position a logo and text placeholder once per size, then upload an
+  event's sign list (an .xlsx/.csv with **Sponsorship**, **Company**, and
+  **Size** columns) to generate every sign automatically. Each sign prints
+  the **Sponsorship** value as its title (e.g. "Dinner Sponsor", "Hole
+  Sponsor") and pulls the matching **Company**'s logo from the same Logo
+  Library used for sponsor walls. Rows are matched by company name and by
+  size label; anything that doesn't match (unknown company, unrecognized
+  size, missing sponsorship title) is still created and flagged "needs
+  attention" so it's easy to find and fix. Download everything as a `.zip`,
+  or edit and re-download any sign individually.
 
 ## Deploying to Vercel
 
@@ -64,3 +76,12 @@ Visit http://localhost:3000.
 - Schema changes: run `npm run db:migrate` locally to create a new
   migration under `prisma/migrations/` and commit it — Vercel applies it
   automatically on the next deploy via `prisma migrate deploy`.
+- Sign PDFs are generated with `pdf-lib` (`lib/signPdf.ts`), drawing text and
+  a logo directly into the uploaded blank template — no headless browser or
+  native PDF-rasterizing dependency involved. Sign lists are parsed with
+  `xlsx` (`lib/excel.ts`). Both the blank templates and the generated signs
+  are stored in Vercel Blob, same as logos.
+- The template editor overlays draggable/resizable boxes on top of the
+  browser's native PDF viewer (`components/PdfBoxEditor.tsx`) rather than
+  rendering the PDF to canvas — positions are approximate previews; check a
+  generated sign to fine-tune.

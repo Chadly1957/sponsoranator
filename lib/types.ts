@@ -29,3 +29,50 @@ export interface EventDTO {
   bronzeGeneralDivider: boolean;
   sponsors: EventSponsorDTO[];
 }
+
+export interface SignTemplateSizeDTO {
+  id: string;
+  templateId: string;
+  label: string;
+  pdfPath: string;
+  pageWidth: number;
+  pageHeight: number;
+  textBoxX: number;
+  textBoxY: number;
+  textBoxW: number;
+  textBoxH: number;
+  logoBoxX: number;
+  logoBoxY: number;
+  logoBoxW: number;
+  logoBoxH: number;
+}
+
+export interface SignTemplateDTO {
+  id: string;
+  name: string;
+  sizes: SignTemplateSizeDTO[];
+}
+
+export interface SignDTO {
+  id: string;
+  signSetId: string;
+  templateSizeId: string | null;
+  companyId: string | null;
+  companyName: string;
+  sponsorship: string;
+  sizeLabel: string;
+  textOverride: string | null;
+  order: number;
+  pdfPath: string | null;
+  status: string;
+  note: string | null;
+  company: CompanyDTO | null;
+}
+
+export interface SignSetDTO {
+  id: string;
+  name: string;
+  templateId: string;
+  template?: SignTemplateDTO;
+  signs: SignDTO[];
+}
