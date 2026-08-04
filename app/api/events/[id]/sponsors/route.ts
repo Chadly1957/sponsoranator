@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { errorResponse, optionalString, resolveLogoFromForm } from '@/lib/api-helpers';
 import { LogoError } from '@/lib/logo';
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
       include: { company: true },
     });
+
+    revalidatePath('/');
+    revalidatePath(`/events/${params.id}`);
 
     return NextResponse.json({ sponsor }, { status: 201 });
   } catch (err) {

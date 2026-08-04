@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import {
   errorResponse,
@@ -63,6 +64,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await deleteLogoFile(existing.logoPath);
     }
 
+    revalidatePath('/');
+    revalidatePath(`/events/${params.id}`);
+
     return NextResponse.json({ event });
   } catch (err) {
     return errorResponse(err);
@@ -76,6 +80,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
     await prisma.event.delete({ where: { id: params.id } });
     await deleteLogoFile(existing.logoPath);
+
+    revalidatePath('/');
+    revalidatePath(`/events/${params.id}`);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
