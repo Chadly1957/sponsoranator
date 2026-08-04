@@ -1,0 +1,2 @@
+ALTER TABLE "SignTemplateSize" ADD COLUMN "textColor" TEXT NOT NULL DEFAULT '#000000';
+ALTER TABLE "SignTemplateSize" ADD COLUMN "textFont" TEXT NOT NULL DEFAULT 'HelveticaBold';

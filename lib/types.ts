@@ -41,6 +41,8 @@ export interface SignTemplateSizeDTO {
   textBoxY: number;
   textBoxW: number;
   textBoxH: number;
+  textColor: string;
+  textFont: string;
   logoBoxX: number;
   logoBoxY: number;
   logoBoxW: number;

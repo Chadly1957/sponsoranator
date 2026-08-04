@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { errorResponse, requireString } from '@/lib/api-helpers';
-import { getPdfPageSize } from '@/lib/signPdf';
+import { errorResponse } from '@/lib/api-helpers';
+import { getPdfPageSize, normalizeHexColor, normalizeSignTextFont } from '@/lib/signPdf';
 import { assertLooksLikePdf, deletePdfFile, saveTemplatePdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +72,8 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
 
     if (typeof body.label === 'string' && body.label.trim()) data.label = body.label.trim();
+    if ('textColor' in body) data.textColor = normalizeHexColor(body.textColor);
+    if ('textFont' in body) data.textFont = normalizeSignTextFont(body.textFont);
 
     const textBox = {
       x: numberField(body, 'textBoxX') ?? size.textBoxX,

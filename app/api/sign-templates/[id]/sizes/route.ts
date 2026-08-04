@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { errorResponse, requireString } from '@/lib/api-helpers';
-import { getPdfPageSize } from '@/lib/signPdf';
+import { getPdfPageSize, normalizeHexColor, normalizeSignTextFont } from '@/lib/signPdf';
 import { assertLooksLikePdf, saveTemplatePdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +15,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const form = await req.formData();
     const label = requireString(form, 'label');
+    const textColor = normalizeHexColor(form.get('textColor'));
+    const textFont = normalizeSignTextFont(form.get('textFont'));
     const file = form.get('file');
     if (!(file instanceof File) || file.size === 0) {
       throw new SignError('A PDF file is required.');
@@ -37,6 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         pdfPath,
         pageWidth,
         pageHeight,
+        textColor,
+        textFont,
         logoBoxX: (pageWidth - logoBoxW) / 2,
         logoBoxY: pageHeight * 0.1,
         logoBoxW,

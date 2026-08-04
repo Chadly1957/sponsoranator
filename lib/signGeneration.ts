@@ -11,6 +11,8 @@ interface TemplateSizeGeometry {
   textBoxY: number;
   textBoxW: number;
   textBoxH: number;
+  textColor: string;
+  textFont: string;
   logoBoxX: number;
   logoBoxY: number;
   logoBoxW: number;
@@ -61,6 +63,8 @@ export async function renderSignRecord(opts: {
       w: opts.templateSize.textBoxW,
       h: opts.templateSize.textBoxH,
     },
+    textColor: opts.templateSize.textColor,
+    textFont: opts.templateSize.textFont,
     logoBox: {
       x: opts.templateSize.logoBoxX,
       y: opts.templateSize.logoBoxY,

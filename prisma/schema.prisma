@@ -90,6 +90,8 @@ model SignTemplateSize {
   textBoxY  Float @default(0)
   textBoxW  Float @default(0)
   textBoxH  Float @default(0)
+  textColor String @default("#000000")
+  textFont  String @default("HelveticaBold")
   logoBoxX  Float @default(0)
   logoBoxY  Float @default(0)
   logoBoxW  Float @default(0)

@@ -2,7 +2,17 @@
 
 import { useRef, useState } from 'react';
 import DraggableBox, { type PctBox } from './DraggableBox';
+import ColorField from './ColorField';
 import type { SignTemplateSizeDTO } from '@/lib/types';
+
+const TEXT_FONT_OPTIONS = [
+  { value: 'Helvetica', label: 'Helvetica' },
+  { value: 'HelveticaBold', label: 'Helvetica Bold' },
+  { value: 'TimesRoman', label: 'Times Roman' },
+  { value: 'TimesRomanBold', label: 'Times Roman Bold' },
+  { value: 'Courier', label: 'Courier' },
+  { value: 'CourierBold', label: 'Courier Bold' },
+];
 
 interface Props {
   size: SignTemplateSizeDTO;
@@ -36,6 +46,8 @@ export default function PdfBoxEditor({ size, onSaved, onDelete }: Props) {
   const [logoBox, setLogoBox] = useState<PctBox>(
     toPct({ x: size.logoBoxX, y: size.logoBoxY, w: size.logoBoxW, h: size.logoBoxH }, size.pageWidth, size.pageHeight)
   );
+  const [textColor, setTextColor] = useState(size.textColor || '#000000');
+  const [textFont, setTextFont] = useState(size.textFont || 'HelveticaBold');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -60,6 +72,8 @@ export default function PdfBoxEditor({ size, onSaved, onDelete }: Props) {
           logoBoxY: logoPt.y,
           logoBoxW: logoPt.w,
           logoBoxH: logoPt.h,
+          textColor,
+          textFont,
         }),
       });
       const data = await res.json();
@@ -122,6 +136,34 @@ export default function PdfBoxEditor({ size, onSaved, onDelete }: Props) {
           label="Text"
           color="#e8384f"
         />
+      </div>
+
+      <div className="mt-4 grid gap-4 rounded-md border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+        <ColorField
+          label="Text color"
+          value={textColor}
+          onChange={(value) => {
+            setTextColor(value);
+            setDirty(true);
+          }}
+        />
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-gray-700">Text font</span>
+          <select
+            className="input"
+            value={textFont}
+            onChange={(e) => {
+              setTextFont(e.target.value);
+              setDirty(true);
+            }}
+          >
+            {TEXT_FONT_OPTIONS.map((font) => (
+              <option key={font.value} value={font.value}>
+                {font.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
