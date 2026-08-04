@@ -14,6 +14,12 @@ export default function Nav() {
           <Link href="/companies" className="hover:text-brand">
             Logo Library
           </Link>
+          <Link href="/sign-sets" className="hover:text-brand">
+            Sign Creator
+          </Link>
+          <Link href="/sign-templates" className="hover:text-brand">
+            Sign Templates
+          </Link>
         </nav>
       </div>
     </header>

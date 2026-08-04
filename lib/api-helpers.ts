@@ -1,10 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { LogoError, importLogoFromUpload, importLogoFromUrl } from './logo';
+import { SignError } from './signFiles';
 import { clampGeneralScale, clampLogoScale, clampLogosPerRow } from './tiers';
 
 export function errorResponse(err: unknown) {
-  if (err instanceof LogoError) {
+  if (err instanceof LogoError || err instanceof SignError) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
