@@ -47,6 +47,7 @@ export default function NewEventPage() {
       const res = await fetch('/api/events', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create event.');
+      router.refresh();
       router.push(`/events/${data.event.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');

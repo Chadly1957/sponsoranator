@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import {
   errorResponse,
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
         logoPath: logoPath ?? null,
       },
     });
+    revalidatePath('/');
     return NextResponse.json({ event }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

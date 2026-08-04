@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/api-helpers';
 import { clampLogoScale, TIER_ORDER } from '@/lib/tiers';
@@ -33,6 +34,9 @@ export async function PATCH(
       include: { company: true },
     });
 
+    revalidatePath('/');
+    revalidatePath(`/events/${params.id}`);
+
     return NextResponse.json({ sponsor });
   } catch (err) {
     return errorResponse(err);
@@ -45,6 +49,8 @@ export async function DELETE(
 ) {
   try {
     await prisma.eventSponsor.delete({ where: { id: params.sponsorId, eventId: params.id } });
+    revalidatePath('/');
+    revalidatePath(`/events/${params.id}`);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return errorResponse(err);
