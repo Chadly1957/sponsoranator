@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import SignEditModal from './SignEditModal';
+import AddSignModal from './AddSignModal';
 import type { SignSetDTO, SignDTO } from '@/lib/types';
 
 export default function SignSetManager({ initialSignSet }: { initialSignSet: SignSetDTO }) {
@@ -9,6 +10,7 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [editingSign, setEditingSign] = useState<SignDTO | null>(null);
+  const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -33,6 +35,10 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
 
   function onSignSaved(updated: SignDTO) {
     setSignSet((s) => ({ ...s, signs: s.signs.map((sign) => (sign.id === updated.id ? updated : sign)) }));
+  }
+
+  function onSignAdded(created: SignDTO) {
+    setSignSet((s) => ({ ...s, signs: [...s.signs, created] }));
   }
 
   async function deleteSign(sign: SignDTO) {
@@ -61,6 +67,14 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setAdding(true)}
+            disabled={!signSet.template || signSet.template.sizes.length === 0}
+          >
+            + Add sign
+          </button>
           <label className="btn-secondary cursor-pointer">
             {uploading ? 'Importing…' : 'Upload sign list (.xlsx)'}
             <input
@@ -76,6 +90,12 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
           </a>
         </div>
       </div>
+
+      {signSet.template && signSet.template.sizes.length === 0 && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          This template has no sizes yet — add one on the template's page before adding signs.
+        </div>
+      )}
 
       {uploadError && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -161,6 +181,15 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
           sizes={signSet.template.sizes}
           onClose={() => setEditingSign(null)}
           onSaved={onSignSaved}
+        />
+      )}
+
+      {adding && signSet.template && (
+        <AddSignModal
+          signSetId={signSet.id}
+          sizes={signSet.template.sizes}
+          onClose={() => setAdding(false)}
+          onAdded={onSignAdded}
         />
       )}
     </div>
