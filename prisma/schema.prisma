@@ -68,6 +68,8 @@ model EventSponsor {
 model SignTemplate {
   id        String             @id @default(cuid())
   name      String
+  // Hex color (e.g. "#0a2f5c") applied to the text drawn on every size of this template.
+  textColor String             @default("#000000")
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   sizes     SignTemplateSize[]

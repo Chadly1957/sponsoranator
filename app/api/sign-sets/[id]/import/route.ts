@@ -60,6 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             templateSize,
             sponsorship: row.sponsorship,
             logoPath: company?.logoPath ?? null,
+            textColor: signSet.template.textColor,
           });
           pdfPath = await saveGeneratedSignPdf(rendered);
         } catch {

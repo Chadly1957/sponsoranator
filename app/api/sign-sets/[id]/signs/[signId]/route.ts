@@ -93,6 +93,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           sponsorship,
           textOverride,
           logoPath: company?.logoPath ?? null,
+          textColor: sign.signSet.template.textColor,
         });
         pdfPath = await saveGeneratedSignPdf(rendered);
       } catch {

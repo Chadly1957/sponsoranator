@@ -39,6 +39,7 @@ export async function renderSignRecord(opts: {
   sponsorship: string;
   textOverride?: string | null;
   logoPath?: string | null;
+  textColor?: string;
 }): Promise<Buffer> {
   const templateBytes = await readPdfBytes(opts.templateSize.pdfPath);
 
@@ -68,6 +69,7 @@ export async function renderSignRecord(opts: {
       h: opts.templateSize.logoBoxH,
     },
     text: opts.textOverride?.trim() ? opts.textOverride : opts.sponsorship,
+    textColor: opts.textColor,
     logoBytes,
   });
 }

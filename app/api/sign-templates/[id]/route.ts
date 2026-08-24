@@ -14,15 +14,25 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ template });
 }
 
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === 'string' ? body.name.trim() : undefined;
     if (name !== undefined && !name) throw new SignError('Template name cannot be empty.');
 
+    const textColor = typeof body.textColor === 'string' ? body.textColor.trim() : undefined;
+    if (textColor !== undefined && !HEX_COLOR.test(textColor)) {
+      throw new SignError('Text color must be a hex value like #0a2f5c.');
+    }
+
     const template = await prisma.signTemplate.update({
       where: { id: params.id },
-      data: { ...(name !== undefined ? { name } : {}) },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(textColor !== undefined ? { textColor } : {}),
+      },
       include: { sizes: true },
     });
     return NextResponse.json({ template });

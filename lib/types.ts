@@ -50,6 +50,7 @@ export interface SignTemplateSizeDTO {
 export interface SignTemplateDTO {
   id: string;
   name: string;
+  textColor: string;
   sizes: SignTemplateSizeDTO[];
 }
 

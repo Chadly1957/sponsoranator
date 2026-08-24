@@ -4,10 +4,19 @@ import { useState } from 'react';
 import PdfBoxEditor from './PdfBoxEditor';
 import type { SignTemplateDTO, SignTemplateSizeDTO } from '@/lib/types';
 
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 export default function SignTemplateEditor({ initialTemplate }: { initialTemplate: SignTemplateDTO }) {
   const [template, setTemplate] = useState<SignTemplateDTO>(initialTemplate);
   const [name, setName] = useState(template.name);
   const [savingName, setSavingName] = useState(false);
+
+  const [textColor, setTextColor] = useState(template.textColor);
+  const [savingColor, setSavingColor] = useState(false);
+  const [colorError, setColorError] = useState<string | null>(null);
+
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateResult, setRegenerateResult] = useState<string | null>(null);
 
   const [newLabel, setNewLabel] = useState('');
   const [newFile, setNewFile] = useState<File | null>(null);
@@ -27,6 +36,57 @@ export default function SignTemplateEditor({ initialTemplate }: { initialTemplat
       if (res.ok) setTemplate((t) => ({ ...t, name: data.template.name }));
     } finally {
       setSavingName(false);
+    }
+  }
+
+  async function saveColor(next: string) {
+    if (!HEX_COLOR.test(next)) {
+      setColorError('Enter a hex color like #0a2f5c.');
+      return;
+    }
+    setColorError(null);
+    if (next === template.textColor) return;
+    setSavingColor(true);
+    setRegenerateResult(null);
+    try {
+      const res = await fetch(`/api/sign-templates/${template.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textColor: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save color.');
+      setTemplate((t) => ({ ...t, textColor: data.template.textColor }));
+    } catch (err) {
+      setColorError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setSavingColor(false);
+    }
+  }
+
+  async function regenerateAllSigns() {
+    if (
+      !confirm(
+        'Regenerate every sign already made from this template? This locks in the current text color everywhere it\'s used.'
+      )
+    )
+      return;
+    setRegenerating(true);
+    setRegenerateResult(null);
+    try {
+      const res = await fetch(`/api/sign-templates/${template.id}/regenerate`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to regenerate signs.');
+      setRegenerateResult(
+        data.total === 0
+          ? 'No generated signs use this template yet.'
+          : `Regenerated ${data.updated} of ${data.total} sign${data.total === 1 ? '' : 's'}` +
+              (data.failed > 0 ? ` (${data.failed} failed).` : '.')
+      );
+    } catch (err) {
+      setRegenerateResult(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -82,6 +142,40 @@ export default function SignTemplateEditor({ initialTemplate }: { initialTemplat
           version). Position the logo and text placeholders once here — they're reused every
           time you generate signs from this template.
         </p>
+      </div>
+
+      <div className="card mb-6 space-y-3 p-5">
+        <h3 className="font-semibold text-gray-900">Text color</h3>
+        <p className="text-sm text-gray-500">
+          Applies to the text on every size of this template. Changing it doesn't touch signs
+          you've already generated until you regenerate them below.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="color"
+            className="h-9 w-14 cursor-pointer rounded border border-gray-300"
+            value={HEX_COLOR.test(textColor) ? textColor : '#000000'}
+            onChange={(e) => {
+              setTextColor(e.target.value);
+              saveColor(e.target.value);
+            }}
+          />
+          <input
+            className="input max-w-[10rem]"
+            value={textColor}
+            onChange={(e) => setTextColor(e.target.value)}
+            onBlur={() => saveColor(textColor)}
+          />
+          {savingColor && <span className="text-xs text-gray-400">Saving…</span>}
+        </div>
+        {colorError && <p className="text-sm text-red-600">{colorError}</p>}
+
+        <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
+          <button type="button" className="btn-secondary" onClick={regenerateAllSigns} disabled={regenerating}>
+            {regenerating ? 'Regenerating…' : 'Regenerate all signs from this template'}
+          </button>
+          {regenerateResult && <span className="text-sm text-gray-600">{regenerateResult}</span>}
+        </div>
       </div>
 
       <div className="space-y-6">

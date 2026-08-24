@@ -20,6 +20,14 @@ function toBottomBox(box: PdfBox, pageHeight: number): BottomBox {
   return { x: box.x, yBottom: pageHeight - box.y - box.h, w: box.w, h: box.h };
 }
 
+/** Parses a "#rrggbb" hex color into pdf-lib's 0-1 RGB, falling back to black. */
+function hexToRgb(hex: string | undefined) {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec((hex ?? '').trim());
+  if (!match) return rgb(0, 0, 0);
+  const int = parseInt(match[1], 16);
+  return rgb(((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255);
+}
+
 /** Splits text on existing newlines, then greedily word-wraps each paragraph to maxWidth. */
 function wrapText(font: PDFFont, text: string, size: number, maxWidth: number): string[] {
   const paragraphs = text.split('\n');
@@ -53,6 +61,8 @@ export interface RenderSignOptions {
   logoBox: PdfBox;
   /** The sign's text — normally the sponsorship title (e.g. "Dinner Sponsor"). */
   text: string;
+  /** Hex color (e.g. "#0a2f5c") for the text — defaults to black. */
+  textColor?: string;
   logoBytes?: Buffer | null;
 }
 
@@ -117,7 +127,7 @@ export async function renderSignPdf(opts: RenderSignOptions): Promise<Buffer> {
         y: cursorY + lineHeight * 0.22,
         size,
         font: bold,
-        color: rgb(0, 0, 0),
+        color: hexToRgb(opts.textColor),
       });
     }
   }
