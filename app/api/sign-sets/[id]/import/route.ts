@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/api-helpers';
 import { parseSignListExcel } from '@/lib/excel';
-import { findCompanyByName, matchTemplateSize, renderSignRecord } from '@/lib/signGeneration';
+import {
+  createSignRenderCache,
+  findCompanyByName,
+  matchTemplateSize,
+  renderSignRecord,
+} from '@/lib/signGeneration';
 import { saveGeneratedSignPdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /** Imports a sign list spreadsheet (Sponsorship / Company / Size columns), generating one
  *  sign PDF per row by matching each row's Size against the set's template sizes and each
@@ -29,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const startOrder = await prisma.sign.count({ where: { signSetId: signSet.id } });
     const created = [];
+    const cache = createSignRenderCache();
 
     for (const [i, row] of rows.entries()) {
       const templateSize = matchTemplateSize(signSet.template.sizes, row.size);
@@ -61,8 +68,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             sponsorship: row.sponsorship,
             logoPath: company?.logoPath ?? null,
             textColor: signSet.template.textColor,
+            cache,
           });
-          pdfPath = await saveGeneratedSignPdf(rendered);
+          pdfPath = await saveGeneratedSignPdf(rendered, `${row.company} - ${templateSize.label}`);
         } catch {
           status = 'needs_attention';
           note = 'Could not generate this sign automatically — try editing it.';

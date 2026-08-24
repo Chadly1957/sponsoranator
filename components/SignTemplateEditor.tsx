@@ -77,11 +77,14 @@ export default function SignTemplateEditor({ initialTemplate }: { initialTemplat
       const res = await fetch(`/api/sign-templates/${template.id}/regenerate`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to regenerate signs.');
+      const failNames = (data.failures ?? [])
+        .map((f: { companyName: string; sizeLabel: string }) => `${f.companyName} (${f.sizeLabel})`)
+        .join(', ');
       setRegenerateResult(
         data.total === 0
           ? 'No generated signs use this template yet.'
-          : `Regenerated ${data.updated} of ${data.total} sign${data.total === 1 ? '' : 's'}` +
-              (data.failed > 0 ? ` (${data.failed} failed).` : '.')
+          : `Regenerated ${data.updated} of ${data.total} sign${data.total === 1 ? '' : 's'}.` +
+              (failNames ? ` Failed: ${failNames} — these kept their previous PDFs, try again.` : '')
       );
     } catch (err) {
       setRegenerateResult(err instanceof Error ? err.message : 'Something went wrong.');

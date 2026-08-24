@@ -12,6 +12,28 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
   const [editingSign, setEditingSign] = useState<SignDTO | null>(null);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  async function exportAll() {
+    setExporting(true);
+    setExportNotice(null);
+    try {
+      const res = await fetch(`/api/sign-sets/${signSet.id}/export`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to build the zip.');
+      if (data.missing?.length > 0) {
+        setExportNotice(
+          `Zip includes ${data.included} of ${data.total} signs — ${data.missing.length} couldn't be included (see "_MISSING SIGNS.txt" inside the zip).`
+        );
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      setExportNotice(err instanceof Error ? err.message : 'Something went wrong building the zip.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -85,9 +107,9 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
               onChange={importFile}
             />
           </label>
-          <a href={`/api/sign-sets/${signSet.id}/export`} className="btn-primary">
-            Download all (.zip)
-          </a>
+          <button type="button" className="btn-primary" onClick={exportAll} disabled={exporting}>
+            {exporting ? 'Building zip…' : 'Download all (.zip)'}
+          </button>
         </div>
       </div>
 
@@ -100,6 +122,12 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
       {uploadError && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {uploadError}
+        </div>
+      )}
+
+      {exportNotice && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          {exportNotice}
         </div>
       )}
 
@@ -145,10 +173,7 @@ export default function SignSetManager({ initialSignSet }: { initialSignSet: Sig
                 <td className="px-4 py-2 text-right">
                   <div className="flex justify-end gap-2">
                     {sign.pdfPath && (
-                      <a
-                        href={`/api/sign-sets/${signSet.id}/signs/${sign.id}`}
-                        className="btn-secondary px-2 py-1 text-xs"
-                      >
+                      <a href={`${sign.pdfPath}?download=1`} className="btn-secondary px-2 py-1 text-xs">
                         Download
                       </a>
                     )}

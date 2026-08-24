@@ -5,6 +5,7 @@ import { renderSignRecord } from '@/lib/signGeneration';
 import { saveGeneratedSignPdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /** Adds a single sign to a sign set by hand (company + sponsorship title + size), generating
  *  its PDF immediately — the same pipeline the spreadsheet import uses, for one row at a time. */
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         logoPath: company?.logoPath ?? null,
         textColor: signSet.template.textColor,
       });
-      pdfPath = await saveGeneratedSignPdf(rendered);
+      pdfPath = await saveGeneratedSignPdf(rendered, `${companyName} - ${templateSize.label}`);
     } catch {
       status = 'needs_attention';
       note = 'Could not generate this sign automatically — try editing it.';

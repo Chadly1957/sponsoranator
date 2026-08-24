@@ -5,6 +5,7 @@ import { getPdfPageSize } from '@/lib/signPdf';
 import { assertLooksLikePdf, deletePdfFile, saveTemplatePdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function clampBox(
   box: { x: number; y: number; w: number; h: number },

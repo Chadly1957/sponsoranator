@@ -5,6 +5,7 @@ import { getPdfPageSize } from '@/lib/signPdf';
 import { assertLooksLikePdf, saveTemplatePdf, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /** Adds a new physical size to a sign template: uploads its blank PDF and seeds starting
  *  placeholder boxes roughly centered on the page, ready to be dragged into place. */

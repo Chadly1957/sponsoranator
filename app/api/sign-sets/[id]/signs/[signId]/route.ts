@@ -5,6 +5,7 @@ import { renderSignRecord } from '@/lib/signGeneration';
 import { deletePdfFile, readPdfBytes, saveGeneratedSignPdf, sanitizePdfFilename, SignError } from '@/lib/signFiles';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 async function loadSign(signSetId: string, signId: string) {
   const sign = await prisma.sign.findUnique({
@@ -79,7 +80,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ? sign.signSet.template.sizes.find((s) => s.id === templateSizeId) ?? null
       : null;
 
-    let pdfPath: string | null = null;
+    // On any failure the sign keeps its previous PDF — a failed regeneration must never
+    // destroy the last good file.
+    let pdfPath: string | null = sign.pdfPath;
     let status: 'ready' | 'needs_attention' = 'ready';
     let note: string | null = null;
 
@@ -95,10 +98,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           logoPath: company?.logoPath ?? null,
           textColor: sign.signSet.template.textColor,
         });
-        pdfPath = await saveGeneratedSignPdf(rendered);
+        pdfPath = await saveGeneratedSignPdf(rendered, `${companyName} - ${sizeLabel}`);
       } catch {
         status = 'needs_attention';
-        note = 'Could not generate this sign — check the template PDF.';
+        note = sign.pdfPath
+          ? 'Regenerating failed — the downloadable PDF is still the previous version. Try saving again.'
+          : 'Could not generate this sign — try saving again.';
       }
     }
 
@@ -118,7 +123,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       include: { company: true },
     });
 
-    await deletePdfFile(sign.pdfPath);
+    if (sign.pdfPath && pdfPath !== sign.pdfPath) {
+      await deletePdfFile(sign.pdfPath);
+    }
 
     return NextResponse.json({ sign: updated });
   } catch (err) {
